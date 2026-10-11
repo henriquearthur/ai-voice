@@ -32,6 +32,12 @@ AI Voice exposes two tools:
 
 AI Voice is published on npm as [`@henriquearthur/ai-voice`](https://www.npmjs.com/package/@henriquearthur/ai-voice). There is nothing to clone or install: `npx` downloads it on first use.
 
+The quickest way is to let your AI agent do the setup. Paste this into Claude Code, Codex or any agent with a terminal, and it will run the steps below and guide you through them:
+
+> Set up the AI Voice MCP server from https://github.com/henriquearthur/ai-voice for me. Follow the quick start in its README and guide me through the Amazon sign-in.
+
+You still sign in to Amazon yourself, in the browser: never give the agent your password. To do it all by hand, follow the steps.
+
 ### 1. Sign in to Amazon
 
 ```sh
