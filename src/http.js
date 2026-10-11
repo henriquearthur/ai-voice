@@ -2,8 +2,8 @@ import { createServer as createHttpServer } from 'node:http';
 import { Readable } from 'node:stream';
 import { createMcpHandler } from '@modelcontextprotocol/server';
 
-// Serve MCP em /mcp para clientes de outras máquinas. Sem autenticação: escutar
-// apenas em endereço de rede privada (loopback ou Tailscale).
+// Serves MCP on /mcp for clients on other machines. No authentication: listen
+// only on a private network address (loopback or a VPN interface).
 export function serveHttp(factory, { host, port }) {
   const handler = createMcpHandler(factory);
   const server = createHttpServer(async (incoming, outgoing) => {
@@ -11,7 +11,7 @@ export function serveHttp(factory, { host, port }) {
       const url = new URL(incoming.url, `http://${incoming.headers.host || 'localhost'}`);
       let response;
       if (url.pathname !== '/mcp') response = new Response('Not found', { status: 404 });
-      // Clientes MCP não enviam Origin; navegadores enviam em requisições entre sites.
+      // MCP clients do not send Origin; browsers do on cross-site requests.
       else if (incoming.headers.origin) response = new Response('Forbidden', { status: 403 });
       else {
         const body = incoming.method === 'GET' || incoming.method === 'HEAD' ? undefined : Readable.toWeb(incoming);

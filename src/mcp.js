@@ -4,7 +4,7 @@ import { MAX_TEXT_LENGTH } from './speech.js';
 
 export function createServer(voice) {
   const server = new McpServer({ name: 'AI Voice', version: '0.2.0' }, {
-    instructions: 'Use speak quando o usuário pedir uma resposta falada. Prefira mensagens breves em português. Listar dispositivos não produz som. Não envie testes espontâneos nem repita falas após erro ou timeout. O sucesso indica aceitação pela API, não confirmação de que o usuário ouviu.',
+    instructions: `Use speak when the user asks for a spoken reply. Prefer short messages in the language of locale ${voice.settings.locale}. Listing devices plays no sound. Do not send unprompted test speech and do not repeat speech after an error or timeout. Success means the API accepted the request, not that the user heard it.`,
   });
   const tool = (fn) => async (args) => {
     try {
@@ -14,14 +14,14 @@ export function createServer(voice) {
     }
   };
   server.registerTool('list_devices', {
-    description: 'Lista Echos físicos da conta Amazon sem reproduzir áudio.',
+    description: 'Lists the physical Echo devices on the Amazon account without playing audio.',
     annotations: { readOnlyHint: true, openWorldHint: true },
   }, tool(() => voice.devices()));
   server.registerTool('speak', {
-    description: 'Fala texto em português na voz da Alexa em um Echo. Usa o Echo padrão quando device_serial é omitido. Textos longos são divididos em uma sequência ordenada. Use quando o usuário pedir fala; não repita automaticamente após erro ou timeout.',
+    description: `Speaks text in the Alexa voice on an Echo device, using locale ${voice.settings.locale}. Uses the default Echo when device_serial is omitted. Long text is split into an ordered sequence. Use when the user asks for speech; do not retry automatically after an error or timeout.`,
     inputSchema: z.object({
-      device_serial: z.string().trim().min(1).optional().describe('Serial retornado por list_devices. Omita para usar AI_VOICE_DEFAULT_DEVICE.'),
-      text: z.string().min(1).max(MAX_TEXT_LENGTH).describe('Texto simples em português, até 4000 unidades UTF-16; sem SSML.'),
+      device_serial: z.string().trim().min(1).optional().describe('Serial returned by list_devices. Omit to use AI_VOICE_DEFAULT_DEVICE.'),
+      text: z.string().min(1).max(MAX_TEXT_LENGTH).describe('Plain text, up to 4000 UTF-16 code units; no SSML.'),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   }, tool((args) => voice.speak(args)));

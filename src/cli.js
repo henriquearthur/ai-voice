@@ -14,17 +14,17 @@ try {
     mkdirSync(settings.stateDir, { recursive: true, mode: 0o700 });
     chmodSync(settings.stateDir, 0o700);
     let formerRegistrationData;
-    try { formerRegistrationData = loadSession(settings.stateDir); } catch { /* Primeiro login. */ }
+    try { formerRegistrationData = loadSession(settings.stateDir); } catch { /* First login. */ }
     const stop = () => { AlexaCookie.stopProxyServer(); };
     process.once('SIGINT', () => { stop(); process.exit(130); });
     process.once('SIGTERM', () => { stop(); process.exit(143); });
     await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { stop(); reject(new Error('Login expirou após 10 minutos.')); }, 600000);
+      const timer = setTimeout(() => { stop(); reject(new Error('Login timed out after 10 minutes.')); }, 600000);
       AlexaCookie.generateAlexaCookie(undefined, undefined, {
         amazonPage: settings.amazonPage,
         baseAmazonPage: 'amazon.com',
-        acceptLanguage: 'pt-BR',
-        amazonPageProxyLanguage: 'pt_BR',
+        acceptLanguage: settings.locale,
+        amazonPageProxyLanguage: settings.locale.replace('-', '_'),
         setupProxy: true,
         proxyOnly: true,
         proxyOwnIp: '127.0.0.1',
@@ -34,27 +34,27 @@ try {
         formerRegistrationData,
       }, (error, session) => {
         if (error?.message.includes('Please open http://')) {
-          console.error('Abra http://127.0.0.1:3456/ no navegador deste Mac e faça login na Amazon (incluindo MFA). Nenhum áudio será enviado.');
+          console.error('Open http://127.0.0.1:3456/ in a browser on this machine and sign in to Amazon (including MFA). No audio will be played.');
           return;
         }
         clearTimeout(timer);
         stop();
         if (error || !session?.localCookie || !session?.refreshToken || !session?.macDms) {
-          reject(new Error('Login Amazon falhou. Tente novamente; não envie senha, MFA ou cookies no chat.'));
+          reject(new Error('Amazon login failed. Try again; never paste your password, MFA code or cookies into a chat.'));
           return;
         }
         try { saveSession(settings.stateDir, session); resolve(); } catch {
-          reject(new Error('Não foi possível salvar a sessão local.'));
+          reject(new Error('Could not save the local session.'));
         }
       });
     });
-    console.error('Sessão salva localmente. Execute npm run devices para verificar os Echos sem áudio.');
+    console.error('Session saved locally. Run npm run devices to list your Echo devices without audio.');
   } else if (action === 'devices') {
     const voice = new AlexaVoice(settings);
     try { console.log(JSON.stringify(await voice.devices(), null, 2)); }
     finally { voice.close(); }
   } else {
-    throw new Error('Uso: npm run login | npm run devices');
+    throw new Error('Usage: npm run login | npm run devices');
   }
 } catch (error) {
   console.error(error.message);

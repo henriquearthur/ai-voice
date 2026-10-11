@@ -24,7 +24,7 @@ function state(t) {
 
 function fixture(t, online = true) {
   const device = {
-    serialNumber: 'TEST-ECHO', accountName: 'Echo de teste', deviceType: 'TEST-TYPE',
+    serialNumber: 'TEST-ECHO', accountName: 'Test Echo', deviceType: 'TEST-TYPE',
     deviceFamily: 'ECHO', deviceOwnerCustomerId: 'TEST-OWNER', online,
   };
   const remote = new AlexaRemote();
@@ -32,7 +32,7 @@ function fixture(t, online = true) {
   remote.getEndpoints = (callback) => callback(null, { websiteApiUrl: 'https://alexa.example' });
   remote.getDevices = (callback) => callback(null, { devices: [device, { deviceFamily: 'WHA', serialNumber: 'GROUP' }] });
   let sent;
-  const voice = new AlexaVoice({ stateDir: state(t), speechEnabled: true }, {
+  const voice = new AlexaVoice({ stateDir: state(t), speechEnabled: true, locale: 'pt-BR' }, {
     createRemote: () => remote,
     send: async (_, sequence) => { sent = sequence; },
   });
@@ -40,19 +40,21 @@ function fixture(t, online = true) {
   return { voice, remote, sent: () => sent };
 }
 
-test('fala bloqueada por padrão, antes de autenticar ou abrir rede', async () => {
+test('speech is disabled by default, before authenticating or opening the network', async () => {
   assert.equal(config({}).speechEnabled, false);
-  const voice = new AlexaVoice({ speechEnabled: false }, { createRemote: () => { throw new Error('não deve executar'); } });
-  await assert.rejects(voice.speak({ device_serial: 'TEST', text: 'Teste' }), /Fala bloqueada/);
+  assert.equal(config({}).locale, 'en-US');
+  const voice = new AlexaVoice({ speechEnabled: false }, { createRemote: () => { throw new Error('must not run'); } });
+  await assert.rejects(voice.speak({ device_serial: 'TEST', text: 'Test' }), /Speech is disabled/);
 });
 
-test('sessão é privada no filesystem', (t) => {
+test('session is private on the filesystem', (t) => {
   const directory = state(t);
   assert.equal(statSync(directory).mode & 0o777, 0o700);
   assert.equal(statSync(join(directory, 'session.json')).mode & 0o777, 0o600);
 });
 
-test('gera fala para um único Echo preservando português e números', async (t) => {
+// Non-.com marketplace and non-English text: the library must not rewrite decimals or the locale.
+test('builds speech for a single Echo, preserving the configured locale and numbers', async (t) => {
   const { voice, sent } = fixture(t);
   const result = await voice.speak({ device_serial: 'TEST-ECHO', text: 'Olá! O valor é 1.25 e a versão é 2.3.' });
   const node = sent().startNode;
@@ -66,15 +68,15 @@ test('gera fala para um único Echo preservando português e números', async (t
   assert.equal(result.status, 'accepted');
 });
 
-test('rejeita vazio, SSML e texto longo antes de conectar', async () => {
-  const voice = new AlexaVoice({ speechEnabled: true }, { createRemote: () => { throw new Error('não deve executar'); } });
-  for (const text of ['', '  ', '<speak>Olá</speak>', 'a'.repeat(MAX_TEXT_LENGTH + 1)]) {
-    await assert.rejects(voice.speak({ device_serial: 'TEST', text }), /texto simples/);
+test('rejects empty text, SSML and overlong text before connecting', async () => {
+  const voice = new AlexaVoice({ speechEnabled: true }, { createRemote: () => { throw new Error('must not run'); } });
+  for (const text of ['', '  ', '<speak>Hello</speak>', 'a'.repeat(MAX_TEXT_LENGTH + 1)]) {
+    await assert.rejects(voice.speak({ device_serial: 'TEST', text }), /plain text/);
   }
 });
 
-test('divide textos longos sem quebrar palavras, frases ou emojis na fronteira', () => {
-  const text = 'Uma frase curta em português. '.repeat(60).trim();
+test('splits long text without breaking words, sentences or emojis at the boundary', () => {
+  const text = 'A short sentence in plain English. '.repeat(60).trim();
   const parts = splitSpeech(text);
   assert.ok(parts.length > 1);
   assert.ok(parts.every((part) => part.length > 0 && part.length <= 250));
@@ -86,10 +88,10 @@ test('divide textos longos sem quebrar palavras, frases ou emojis na fronteira',
   }
 });
 
-test('usa Echo padrão e envia todos os trechos em um único SerialNode', async (t) => {
+test('uses the default Echo and sends every chunk in a single SerialNode', async (t) => {
   const { voice, sent } = fixture(t);
   voice.settings.defaultDevice = 'TEST-ECHO';
-  const text = 'Este é um texto que será falado em partes ordenadas. '.repeat(12).trim();
+  const text = 'This is a text that will be spoken in ordered parts. '.repeat(12).trim();
   const result = await voice.speak({ text });
   assert.equal((await voice.devices())[0].is_default, true);
   const node = sent().startNode;
@@ -99,13 +101,13 @@ test('usa Echo padrão e envia todos os trechos em um único SerialNode', async 
   assert.ok(node.nodesToExecute.every((part) => part.operationPayload.locale === 'pt-BR' && part.operationPayload.deviceSerialNumber === 'TEST-ECHO'));
 });
 
-test('não escolhe destino automaticamente quando não há Echo padrão', async (t) => {
+test('does not pick a target automatically when there is no default Echo', async (t) => {
   const { voice, sent } = fixture(t);
-  await assert.rejects(voice.speak({ text: 'Teste' }), /AI_VOICE_DEFAULT_DEVICE/);
+  await assert.rejects(voice.speak({ text: 'Test' }), /AI_VOICE_DEFAULT_DEVICE/);
   assert.equal(sent(), undefined);
 });
 
-test('renova sessão antiga e persiste os tokens sem abrir proxy', async (t) => {
+test('renews an old session and persists the tokens without opening a proxy', async (t) => {
   const { voice, remote } = fixture(t);
   const previous = loadSession(voice.settings.stateDir);
   previous.tokenDate = Date.now() - 25 * 60 * 60 * 1000;
@@ -123,7 +125,7 @@ test('renova sessão antiga e persiste os tokens sem abrir proxy', async (t) => 
   assert.deepEqual(remote.macDms, { token: 'new-jwt' });
 });
 
-test('refresh após cookie inválido ocorre uma vez; falha não entra em loop', async (t) => {
+test('refresh after an invalid cookie happens once; failure does not loop', async (t) => {
   const { voice, remote } = fixture(t);
   let refreshes = 0;
   remote.checkAuthentication = (callback) => callback(false);
@@ -131,12 +133,12 @@ test('refresh após cookie inválido ocorre uma vez; falha não entra em loop', 
     refreshes++;
     callback(null, loadSession(voice.settings.stateDir));
   };
-  await assert.rejects(voice.devices(), /Sessão Amazon inválida/);
+  await assert.rejects(voice.devices(), /Amazon session is invalid/);
   assert.equal(refreshes, 1);
   assert.equal(voice.connecting, undefined);
 });
 
-test('processo persistente verifica autenticação novamente após 30 minutos', async (t) => {
+test('long-running process checks authentication again after 30 minutes', async (t) => {
   const { voice, remote } = fixture(t);
   let checks = 0;
   remote.checkAuthentication = (callback) => { checks++; callback(true); };
@@ -148,7 +150,7 @@ test('processo persistente verifica autenticação novamente após 30 minutos', 
   assert.equal(checks, 2);
 });
 
-test('falha na renovação orienta novo login e permite tentar novamente', async (t) => {
+test('renewal failure asks for a new login and allows retrying', async (t) => {
   const { voice, remote } = fixture(t);
   remote.checkAuthentication = (callback) => callback(false);
   remote.refreshCookie = (callback) => callback(new Error('SECRET-TOKEN'));
@@ -158,7 +160,7 @@ test('falha na renovação orienta novo login e permite tentar novamente', async
   assert.equal((await voice.devices()).length, 1);
 });
 
-test('rejeita envio concorrente e nunca repete fala quando transporte falha', async (t) => {
+test('rejects concurrent requests and never repeats speech when the transport fails', async (t) => {
   const { voice } = fixture(t);
   let fail;
   let sends = 0;
@@ -166,24 +168,24 @@ test('rejeita envio concorrente e nunca repete fala quando transporte falha', as
     sends++;
     return new Promise((_, reject) => { fail = reject; });
   };
-  const first = voice.speak({ device_serial: 'TEST-ECHO', text: 'Teste' });
-  await assert.rejects(voice.speak({ device_serial: 'TEST-ECHO', text: 'Outro teste' }), /em andamento/);
+  const first = voice.speak({ device_serial: 'TEST-ECHO', text: 'Test' });
+  await assert.rejects(voice.speak({ device_serial: 'TEST-ECHO', text: 'Another test' }), /in progress/);
   await new Promise((resolve) => setImmediate(resolve));
-  fail(new Error('Falha simulada'));
-  await assert.rejects(first, /Falha simulada/);
+  fail(new Error('Simulated failure'));
+  await assert.rejects(first, /Simulated failure/);
   assert.equal(sends, 1);
   assert.equal(voice.speaking, false);
 });
 
-test('exclui grupos e rejeita dispositivo inexistente/offline sem envio', async (t) => {
+test('excludes groups and rejects unknown/offline devices without sending', async (t) => {
   const { voice, sent } = fixture(t, false);
   assert.equal((await voice.devices()).length, 1);
-  await assert.rejects(voice.speak({ device_serial: 'GROUP', text: 'Teste' }), /não encontrado/);
-  await assert.rejects(voice.speak({ device_serial: 'TEST-ECHO', text: 'Teste' }), /offline/);
+  await assert.rejects(voice.speak({ device_serial: 'GROUP', text: 'Test' }), /not found/);
+  await assert.rejects(voice.speak({ device_serial: 'TEST-ECHO', text: 'Test' }), /offline/);
   assert.equal(sent(), undefined);
 });
 
-test('POST verifica HTTP e erros JSON, não repete e não revela credenciais', async () => {
+test('POST checks HTTP status and JSON errors, does not retry and does not leak credentials', async () => {
   let status = 200, body = '', calls = 0;
   const stub = mock.method(https, 'request', (options, callback) => {
     calls++;
@@ -207,14 +209,14 @@ test('POST verifica HTTP e erros JSON, não repete e não revela credenciais', a
     status = 403; body = '{"message":"SECRET-COOKIE"}';
     await assert.rejects(postSpeech(remote, {}), /HTTP 403/);
     status = 200;
-    await assert.rejects(postSpeech(remote, {}), /retornou um erro/);
+    await assert.rejects(postSpeech(remote, {}), /returned an error/);
     body = '<html>login</html>';
-    await assert.rejects(postSpeech(remote, {}), /inesperada/);
+    await assert.rejects(postSpeech(remote, {}), /Unexpected/);
     assert.equal(calls, 4);
   } finally { stub.mock.restore(); }
 });
 
-test('MCP real via stdio: handshake, descoberta, bloqueio de fala e sessão ausente', async (t) => {
+test('real MCP over stdio: handshake, discovery, disabled speech and missing session', async (t) => {
   const directory = mkdtempSync(join(tmpdir(), 'ai-voice-mcp-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const transport = new StdioClientTransport({
@@ -228,16 +230,16 @@ test('MCP real via stdio: handshake, descoberta, bloqueio de fala e sessão ause
     assert.equal(client.getServerVersion().name, 'AI Voice');
     const tools = await client.listTools();
     assert.deepEqual(tools.tools.map((tool) => tool.name).sort(), ['list_devices', 'speak']);
-    const result = await client.callTool({ name: 'speak', arguments: { device_serial: 'TEST', text: 'Teste' } });
+    const result = await client.callTool({ name: 'speak', arguments: { device_serial: 'TEST', text: 'Test' } });
     assert.equal(result.isError, true);
-    assert.match(result.content[0].text, /Fala bloqueada/);
+    assert.match(result.content[0].text, /Speech is disabled/);
     const devices = await client.callTool({ name: 'list_devices', arguments: {} });
     assert.equal(devices.isError, true);
-    assert.match(devices.content[0].text, /Sessão Amazon ausente/);
+    assert.match(devices.content[0].text, /Amazon session is missing/);
   } finally { await client.close(); }
 });
 
-test('MCP via HTTP: ferramentas em /mcp, bloqueio de fala e recusa de navegador', async (t) => {
+test('MCP over HTTP: tools on /mcp, disabled speech and browser rejection', async (t) => {
   const directory = mkdtempSync(join(tmpdir(), 'ai-voice-http-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const voice = new AlexaVoice(config({ AI_VOICE_STATE_DIR: directory }));
@@ -249,9 +251,9 @@ test('MCP via HTTP: ferramentas em /mcp, bloqueio de fala e recusa de navegador'
     await client.connect(new StreamableHTTPClientTransport(new URL(url)));
     const tools = await client.listTools();
     assert.deepEqual(tools.tools.map((tool) => tool.name).sort(), ['list_devices', 'speak']);
-    const result = await client.callTool({ name: 'speak', arguments: { device_serial: 'TEST', text: 'Teste' } });
+    const result = await client.callTool({ name: 'speak', arguments: { device_serial: 'TEST', text: 'Test' } });
     assert.equal(result.isError, true);
-    assert.match(result.content[0].text, /Fala bloqueada/);
+    assert.match(result.content[0].text, /Speech is disabled/);
   } finally { await client.close(); }
   const browser = await fetch(url, { method: 'POST', headers: { Origin: 'https://example.com', 'Content-Type': 'application/json' }, body: '{}' });
   assert.equal(browser.status, 403);

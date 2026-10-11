@@ -13,7 +13,7 @@ if (settings.httpPort === undefined) {
   process.stdin.once('end', () => voice.close());
 } else {
   handle = await serveHttp(() => createServer(voice), { host: settings.httpHost, port: settings.httpPort });
-  console.error(`AI Voice em http://${settings.httpHost}:${handle.port}/mcp`);
+  console.error(`AI Voice listening on http://${settings.httpHost}:${handle.port}/mcp`);
 }
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.once(signal, async () => { voice.close(); await handle.close(); process.exit(0); });

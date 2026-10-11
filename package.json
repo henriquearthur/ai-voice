@@ -2,8 +2,10 @@
   "name": "ai-voice",
   "version": "0.2.0",
   "private": true,
+  "license": "MIT",
+  "repository": "github:henriquearthur/ai-voice",
   "type": "module",
-  "description": "MCP local para falar texto em dispositivos Amazon Echo",
+  "description": "MCP server that lets AI agents speak through Amazon Echo devices",
   "engines": {
     "node": ">=22"
   },
