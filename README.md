@@ -1,3 +1,5 @@
+![Claude + Echo: your AI coding agent, now with a voice](https://raw.githubusercontent.com/henriquearthur/ai-voice/main/assets/claude-echo.png)
+
 # AI Voice
 
 An [MCP](https://modelcontextprotocol.io) server that lets AI agents talk to you out loud through your Amazon Echo, in the Alexa voice.
