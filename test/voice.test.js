@@ -154,7 +154,7 @@ test('renewal failure asks for a new login and allows retrying', async (t) => {
   const { voice, remote } = fixture(t);
   remote.checkAuthentication = (callback) => callback(false);
   remote.refreshCookie = (callback) => callback(new Error('SECRET-TOKEN'));
-  await assert.rejects(voice.devices(), /npm run login/);
+  await assert.rejects(voice.devices(), /ai-voice login/);
   assert.equal(voice.connecting, undefined);
   remote.checkAuthentication = (callback) => callback(true);
   assert.equal((await voice.devices()).length, 1);
@@ -220,7 +220,7 @@ test('real MCP over stdio: handshake, discovery, disabled speech and missing ses
   const directory = mkdtempSync(join(tmpdir(), 'ai-voice-mcp-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const transport = new StdioClientTransport({
-    command: process.execPath, args: ['src/server.js'], cwd: process.cwd(),
+    command: process.execPath, args: ['src/cli.js'], cwd: process.cwd(),
     env: { PATH: process.env.PATH, AI_VOICE_STATE_DIR: directory, AI_VOICE_ENABLE_SPEECH: '0' },
     stderr: 'pipe',
   });

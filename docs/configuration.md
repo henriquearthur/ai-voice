@@ -4,7 +4,7 @@ Exact settings, tool contracts and failure messages of AI Voice. To install and 
 
 ## Environment variables
 
-Set these in the MCP client configuration that launches the server, or in the service that hosts it. `npm run login` and `npm run devices` read the same variables from the shell.
+Set these in the MCP client configuration that launches the server, or in the service that hosts it. The `login` and `devices` commands read the same variables from the shell.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -21,10 +21,11 @@ Set these in the MCP client configuration that launches the server, or in the se
 
 | Command | Effect |
 | --- | --- |
-| `npm run login` | Opens a login proxy on `http://127.0.0.1:3456/` and saves the Amazon session. Plays no audio. |
-| `npm run devices` | Prints the Echo devices as JSON. Plays no audio. |
-| `npm start` | Starts the server. In MCP client configurations, launch `node src/server.js` directly so stdout carries only the protocol. |
-| `npm test` | Runs the test suite against simulated devices. |
+| `npx @henriquearthur/ai-voice login` | Opens a login proxy on `http://127.0.0.1:3456/` and saves the Amazon session. Plays no audio. |
+| `npx @henriquearthur/ai-voice devices` | Prints the Echo devices as JSON. Plays no audio. |
+| `npx @henriquearthur/ai-voice` | Starts the server. Stdout carries only the MCP protocol. |
+
+With a global install (`npm install -g @henriquearthur/ai-voice`) the same commands are `ai-voice login`, `ai-voice devices` and `ai-voice`.
 
 ## Tools
 
@@ -68,9 +69,9 @@ Tokens older than 24 hours are renewed when the server connects, and authenticat
 | --- | --- |
 | `Speech is disabled.` | Set `AI_VOICE_ENABLE_SPEECH=1` in the client configuration and restart the client. |
 | `Provide device_serial or set AI_VOICE_DEFAULT_DEVICE.` | Set a default Echo, or have the agent pass a serial from `list_devices`. |
-| `Amazon session is missing or invalid.` | Run `npm run login` on the machine that hosts AI Voice, with the same `AI_VOICE_STATE_DIR` the server uses. |
-| `Amazon session expired and could not be renewed.` | Run `npm run login` again. |
-| `Echo not found.` | The serial is not a physical Echo on this account. Check `npm run devices`. |
+| `Amazon session is missing or invalid.` | Run `npx @henriquearthur/ai-voice login` on the machine that hosts AI Voice, with the same `AI_VOICE_STATE_DIR` the server uses. |
+| `Amazon session expired and could not be renewed.` | Run `npx @henriquearthur/ai-voice login` again. |
+| `Echo not found.` | The serial is not a physical Echo on this account. Check `npx @henriquearthur/ai-voice devices`. |
 | `Echo is offline.` | Check the device's power and Wi-Fi. |
 | Login or device listing fails on your account | Check `AI_VOICE_AMAZON_PAGE` matches the marketplace where the account is registered. See [marketplace and host](alexa-integration.md#marketplace-host-and-locale) before changing `AI_VOICE_ALEXA_HOST`. |
 | The Echo speaks with the wrong accent or misreads the text | Set `AI_VOICE_LOCALE` to the language of the text. |

@@ -1,0 +1,26 @@
+name: Publish
+on:
+  release:
+    types: [published]
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - name: Check the tag matches package.json
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: test "$TAG" = "v$(node -p "require('./package.json').version")"
+      - run: npm ci
+      - run: npm test
+      # Trusted publishing (OIDC) needs npm 11.5.1 or newer and no token.
+      - run: npm install -g npm@latest
+      - run: npm publish

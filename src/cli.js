@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import AlexaCookie from 'alexa-cookie2';
 import { mkdirSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
@@ -10,7 +11,9 @@ const settings = config();
 const action = process.argv[2];
 
 try {
-  if (action === 'login') {
+  if (action === undefined) {
+    await import('./server.js');
+  } else if (action === 'login') {
     mkdirSync(settings.stateDir, { recursive: true, mode: 0o700 });
     chmodSync(settings.stateDir, 0o700);
     let formerRegistrationData;
@@ -48,13 +51,13 @@ try {
         }
       });
     });
-    console.error('Session saved locally. Run npm run devices to list your Echo devices without audio.');
+    console.error('Session saved locally. Run npx @henriquearthur/ai-voice devices to list your Echo devices without audio.');
   } else if (action === 'devices') {
     const voice = new AlexaVoice(settings);
     try { console.log(JSON.stringify(await voice.devices(), null, 2)); }
     finally { voice.close(); }
   } else {
-    throw new Error('Usage: npm run login | npm run devices');
+    throw new Error('Usage: ai-voice [login | devices]');
   }
 } catch (error) {
   console.error(error.message);

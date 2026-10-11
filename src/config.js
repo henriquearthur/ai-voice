@@ -1,5 +1,8 @@
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
+import pkg from '../package.json' with { type: 'json' };
+
+export const { version } = pkg;
 
 export function config(env = process.env) {
   return {

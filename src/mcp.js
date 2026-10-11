@@ -1,9 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import { MAX_TEXT_LENGTH } from './speech.js';
+import { version } from './config.js';
 
 export function createServer(voice) {
-  const server = new McpServer({ name: 'AI Voice', version: '0.2.0' }, {
+  const server = new McpServer({ name: 'AI Voice', version }, {
     instructions: `Use speak when the user asks for a spoken reply. Prefer short messages in the language of locale ${voice.settings.locale}. Listing devices plays no sound. Do not send unprompted test speech and do not repeat speech after an error or timeout. Success means the API accepted the request, not that the user heard it.`,
   });
   const tool = (fn) => async (args) => {

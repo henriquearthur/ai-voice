@@ -28,18 +28,12 @@ AI Voice exposes two tools:
 
 ## Quick start
 
-### 1. Install
+AI Voice is published on npm as [`@henriquearthur/ai-voice`](https://www.npmjs.com/package/@henriquearthur/ai-voice). There is nothing to clone or install: `npx` downloads it on first use.
+
+### 1. Sign in to Amazon
 
 ```sh
-git clone https://github.com/henriquearthur/ai-voice.git
-cd ai-voice
-npm ci
-```
-
-### 2. Sign in to Amazon
-
-```sh
-npm run login
+npx @henriquearthur/ai-voice login
 ```
 
 When the terminal says the proxy is ready, open **http://127.0.0.1:3456/** in a browser on the same machine and sign in to Amazon, including MFA or CAPTCHA if asked. You type your password in the browser, never into an agent or chat. The proxy only listens on loopback and shuts down when login completes, after ten minutes, or on Ctrl+C. Logging in may register a virtual device on your Amazon account.
@@ -47,31 +41,33 @@ When the terminal says the proxy is ready, open **http://127.0.0.1:3456/** in a 
 If your account is not on `amazon.com`, pass your marketplace for the login:
 
 ```sh
-AI_VOICE_AMAZON_PAGE=amazon.co.uk npm run login
+AI_VOICE_AMAZON_PAGE=amazon.co.uk npx @henriquearthur/ai-voice login
 ```
 
 The session is stored in `~/.local/share/ai-voice/` with owner-only permissions. It holds tokens for your Amazon account: do not share or commit that folder.
 
-### 3. Pick your Echo
+### 2. Pick your Echo
 
 ```sh
-npm run devices
+npx @henriquearthur/ai-voice devices
 ```
 
 This lists your Echo devices without playing audio. Copy the `serial` of the one that should speak by default.
 
-### 4. Connect your agent
+### 3. Connect your agent
 
-Speech stays disabled until you set `AI_VOICE_ENABLE_SPEECH=1`, so nothing can make noise in your home before you opt in. In the examples below, replace `/path/to/ai-voice` with the absolute path of your clone and `SERIAL` with the serial from step 3. Set `AI_VOICE_LOCALE` if your Echo does not speak `en-US`, for example `pt-BR` or `de-DE`.
+Speech stays disabled until you set `AI_VOICE_ENABLE_SPEECH=1`, so nothing can make noise in your home before you opt in. In the examples below, replace `SERIAL` with the serial from step 2. Set `AI_VOICE_LOCALE` if your Echo does not speak `en-US`, for example `pt-BR` or `de-DE`.
 
-If your client does not inherit your shell `PATH` (common with nvm or fnm), replace `node` with the output of `node -p process.execPath`.
+If your client does not inherit your shell `PATH` (common with nvm or fnm), replace `npx` with its absolute path, from `which npx`.
+
+`npx -y` runs the latest published version. To stay on one version, pin it, for example `@henriquearthur/ai-voice@0.3.0`.
 
 #### Claude Code
 
 ```sh
 claude mcp add ai-voice --scope user \
   --env AI_VOICE_ENABLE_SPEECH=1 --env AI_VOICE_DEFAULT_DEVICE=SERIAL \
-  -- node /path/to/ai-voice/src/server.js
+  -- npx -y @henriquearthur/ai-voice
 ```
 
 #### Codex
@@ -79,15 +75,15 @@ claude mcp add ai-voice --scope user \
 ```sh
 codex mcp add ai-voice \
   --env AI_VOICE_ENABLE_SPEECH=1 --env AI_VOICE_DEFAULT_DEVICE=SERIAL \
-  -- node /path/to/ai-voice/src/server.js
+  -- npx -y @henriquearthur/ai-voice
 ```
 
 Or add it to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.ai-voice]
-command = "node"
-args = ["/path/to/ai-voice/src/server.js"]
+command = "npx"
+args = ["-y", "@henriquearthur/ai-voice"]
 env = { AI_VOICE_ENABLE_SPEECH = "1", AI_VOICE_DEFAULT_DEVICE = "SERIAL" }
 ```
 
@@ -99,19 +95,17 @@ AI Voice is a standard stdio MCP server. Most clients (Claude Desktop, Cursor, V
 {
   "mcpServers": {
     "ai-voice": {
-      "command": "node",
-      "args": ["/path/to/ai-voice/src/server.js"],
+      "command": "npx",
+      "args": ["-y", "@henriquearthur/ai-voice"],
       "env": { "AI_VOICE_ENABLE_SPEECH": "1", "AI_VOICE_DEFAULT_DEVICE": "SERIAL" }
     }
   }
 }
 ```
 
-Launch the server with `node` directly rather than `npm start`: stdout must carry only the MCP protocol.
-
 Clients that speak Streamable HTTP can also connect to an AI Voice instance running on another machine. See [Serve AI Voice over the network](docs/network.md).
 
-### 5. Try it
+### 4. Try it
 
 Restart or reconnect your client, then ask:
 
@@ -125,7 +119,7 @@ To make an agent speak without being asked each time, add a rule to its instruct
 - AI Voice never retries speech. After a timeout or error the Echo may already have received the request, and retrying would repeat it.
 - Text longer than 250 characters is split at sentence or word boundaries and sent as one ordered sequence.
 - One server speaks one request at a time, on one physical Echo. Device groups, volume control and SSML are out of scope.
-- The session renews itself. If renewal fails, the tool asks you to run `npm run login` again.
+- The session renews itself. If renewal fails, the tool asks you to run `npx @henriquearthur/ai-voice login` again.
 
 ## Documentation
 
@@ -136,11 +130,15 @@ To make an agent speak without being asked each time, add a rule to its instruct
 ## Development
 
 ```sh
+git clone https://github.com/henriquearthur/ai-voice.git
+cd ai-voice
 npm ci
 npm test
 ```
 
 Tests use simulated Amazon devices and transport, need no Amazon account and play no audio. The MCP tests run a real client over stdio and HTTP.
+
+Publishing a GitHub release whose tag matches the version in `package.json` (for example `v0.3.0`) publishes that version to npm from GitHub Actions.
 
 Issues and pull requests are welcome. Reports from marketplaces, locales and Echo models other than the ones listed in [what was validated](docs/alexa-integration.md#what-was-validated) are especially useful.
 

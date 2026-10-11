@@ -1,16 +1,26 @@
 {
-  "name": "ai-voice",
-  "version": "0.2.0",
-  "private": true,
+  "name": "@henriquearthur/ai-voice",
+  "version": "0.3.0",
   "license": "MIT",
-  "repository": "github:henriquearthur/ai-voice",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/henriquearthur/ai-voice.git"
+  },
+  "keywords": ["mcp", "mcp-server", "alexa", "echo", "tts", "claude", "codex"],
+  "bin": {
+    "ai-voice": "src/cli.js"
+  },
+  "files": ["src", "docs"],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "description": "MCP server that lets AI agents speak through Amazon Echo devices",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node src/cli.js",
     "login": "node src/cli.js login",
     "devices": "node src/cli.js devices",
     "test": "node --test"

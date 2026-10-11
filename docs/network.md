@@ -2,7 +2,7 @@
 
 Run AI Voice once on an always-on machine and point the agents on your other machines at it. The Amazon session stays only on the host.
 
-Prerequisite: AI Voice is installed and signed in on the host, as in the [quick start](../README.md#quick-start), steps 1 to 3.
+Prerequisite: AI Voice is signed in on the host, as in the [quick start](../README.md#quick-start), steps 1 and 2.
 
 ## Understand the exposure first
 
@@ -19,14 +19,14 @@ Setting `AI_VOICE_HTTP_PORT` switches the server from stdio to Streamable HTTP o
 ```sh
 AI_VOICE_HTTP_HOST=PRIVATE-IP AI_VOICE_HTTP_PORT=7347 \
 AI_VOICE_ENABLE_SPEECH=1 AI_VOICE_DEFAULT_DEVICE=SERIAL \
-node src/server.js
+npx -y @henriquearthur/ai-voice
 ```
 
 It logs `AI Voice listening on http://PRIVATE-IP:7347/mcp` to stderr.
 
 ## Keep it running with systemd
 
-On Linux, create `~/.config/systemd/user/ai-voice.service`, replacing the placeholders. Get the absolute Node path with `node -p process.execPath`.
+On Linux, create `~/.config/systemd/user/ai-voice.service`, replacing the placeholders. Install AI Voice globally on the host with `npm install -g @henriquearthur/ai-voice`, so the service runs a fixed version, and get the absolute path of the command with `which ai-voice`. If the service cannot find `node`, add an `Environment=PATH=` line that includes its directory.
 
 ```ini
 [Unit]
@@ -35,12 +35,11 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-WorkingDirectory=/path/to/ai-voice
 Environment=AI_VOICE_HTTP_HOST=PRIVATE-IP
 Environment=AI_VOICE_HTTP_PORT=7347
 Environment=AI_VOICE_ENABLE_SPEECH=1
 Environment=AI_VOICE_DEFAULT_DEVICE=SERIAL
-ExecStart=/path/to/node src/server.js
+ExecStart=/path/to/ai-voice
 Restart=on-failure
 RestartSec=5
 

@@ -17,6 +17,6 @@ export function loadSession(stateDir) {
     if (!session.localCookie || !session.refreshToken || !session.macDms) throw new Error();
     return session;
   } catch {
-    throw new Error('Amazon session is missing or invalid. Run npm run login on the machine that hosts AI Voice.');
+    throw new Error('Amazon session is missing or invalid. Run npx @henriquearthur/ai-voice login on the machine that hosts AI Voice.');
   }
 }

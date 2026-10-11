@@ -29,7 +29,7 @@ Login uses the manual proxy flow of `alexa-cookie2`, which supports MFA and CAPT
 AI Voice hardens that flow:
 
 - The proxy binds to `127.0.0.1` only. The library's default bind is `0.0.0.0`, which would publish the login page on your LAN. ([configuration and bind](https://github.com/Apollon77/alexa-cookie/blob/260be379d9af47525efc8509c731014848f00221/alexa-cookie.js#L198))
-- The proxy exists only while `npm run login` runs. The MCP server never opens it.
+- The proxy exists only while the `login` command runs. The MCP server never opens it.
 - The complete object returned by login is persisted, with `localCookie`, `refreshToken`, `macDms` and registration data. Saving only the cookie string would lose what renewal needs and could create repeated device registrations.
 - The session lives outside the repository, in a `0700` directory with a `0600` file.
 - No logger is passed to the libraries, because their debug output includes cookies and tokens.
@@ -79,4 +79,4 @@ A positive response means "accepted by the API". It is never proof of audible pl
 
 `npm audit` reports five high-severity packages through one transitive chain: `braces@3.0.3`, pulled in by the proxy middleware of `alexa-cookie2`. The advisory describes a denial of service through deeply nested patterns and lists no fixed version. ([GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm))
 
-The affected code runs only in the login proxy, which is bound to loopback and alive only during `npm run login`. That reduces exposure; it does not fix the dependency. Separately, `package.json` overrides `cookie` to `0.7.2` to resolve a low-severity advisory.
+The affected code runs only in the login proxy, which is bound to loopback and alive only during the `login` command. That reduces exposure; it does not fix the dependency. Separately, `package.json` overrides `cookie` to `0.7.2` to resolve a low-severity advisory.

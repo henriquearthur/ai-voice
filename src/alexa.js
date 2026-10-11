@@ -2,6 +2,7 @@ import https from 'node:https';
 import AlexaRemote from 'alexa-remote2';
 import { loadSession, saveSession } from './session.js';
 import { splitSpeech, speechSequence } from './speech.js';
+import { version } from './config.js';
 
 const AUTH_CHECK_INTERVAL = 30 * 60 * 1000;
 const TOKEN_REFRESH_INTERVAL = 24 * 60 * 60 * 1000;
@@ -28,7 +29,7 @@ export function postSpeech(remote, sequence, locale = 'en-US') {
         'Content-Length': Buffer.byteLength(data),
         Cookie: remote.cookie,
         csrf: remote.csrf,
-        'User-Agent': 'AI-Voice/0.2.0',
+        'User-Agent': `AI-Voice/${version}`,
         'Accept-Language': locale,
         Origin: `https://${remote.baseUrl}`,
         Referer: `https://${remote.baseUrl}/spa/index.html`,
@@ -90,7 +91,7 @@ export class AlexaVoice {
       amazonPage: session.amazonPage || this.settings.amazonPage,
       baseAmazonPage: 'amazon.com',
       acceptLanguage: this.settings.locale,
-      apiUserAgentPostfix: 'AI-Voice/0.2.0',
+      apiUserAgentPostfix: `AI-Voice/${version}`,
       setupProxy: false,
       // No logger: the library logs cookies/tokens in debug mode.
     };
@@ -99,7 +100,7 @@ export class AlexaVoice {
     const refresh = async () => {
       const renewed = await new Promise((resolve, reject) => remote.refreshCookie((error, result) => {
         if (error || !result?.localCookie || !result?.refreshToken || !result?.macDms) {
-          return reject(new Error('Amazon session expired and could not be renewed. Run npm run login.'));
+          return reject(new Error('Amazon session expired and could not be renewed. Run npx @henriquearthur/ai-voice login.'));
         }
         resolve(result);
       }));
@@ -118,9 +119,9 @@ export class AlexaVoice {
       resolve(valid === true && !error);
     }));
     if (!await authenticated()) {
-      if (refreshed) throw new Error('Amazon session is invalid. Run npm run login.');
+      if (refreshed) throw new Error('Amazon session is invalid. Run npx @henriquearthur/ai-voice login.');
       await refresh();
-      if (!await authenticated()) throw new Error('Amazon session is invalid. Run npm run login.');
+      if (!await authenticated()) throw new Error('Amazon session is invalid. Run npx @henriquearthur/ai-voice login.');
     }
     remote.lastAuthCheck = Date.now();
     const endpoints = await new Promise((resolve) => remote.getEndpoints((error, result) => resolve(error ? undefined : result)));
