@@ -4,7 +4,7 @@ Investigação documental em 11/10/2026. Nenhuma sessão Amazon foi aberta, cred
 
 ## Validação real
 
-Em 11/10/2026, depois desta pesquisa, o usuário autorizou e confirmou dois testes audíveis em um Echo Dot de uma conta `amazon.com.br`: login por proxy local, listagem e fala em pt-BR funcionaram. A renovação de tokens por `refreshCookie` também foi exercitada com sucesso, sem áudio. O restante deste documento conserva a análise documental feita antes desses testes; os trechos marcados como não confirmados referem-se àquele momento. Seguem sem validação: sequências com vários trechos, outros modelos de Echo, não perturbe e limites do backend.
+Em 11/10/2026, depois desta pesquisa, o usuário autorizou e confirmou dois testes audíveis em um Echo Dot de uma conta `amazon.com.br`: login por proxy local, listagem e fala em pt-BR funcionaram. A renovação de tokens por `refreshCookie` também foi exercitada com sucesso, sem áudio. Em seguida, pelo MCP cadastrado no Claude Code, o usuário confirmou uma fala curta no Echo padrão e uma fala de dois trechos, ouvida em ordem. O restante deste documento conserva a análise documental feita antes desses testes; os trechos marcados como não confirmados referem-se àquele momento. Seguem sem validação: outros modelos de Echo, não perturbe e limites do backend.
 
 ## Conclusão e mínimo recomendado
 
