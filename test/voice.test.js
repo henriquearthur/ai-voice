@@ -9,13 +9,14 @@ import AlexaRemote from 'alexa-remote2';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { AlexaVoice, postSpeech } from '../src/alexa.js';
-import { saveSession } from '../src/session.js';
+import { saveSession, loadSession } from '../src/session.js';
 import { config } from '../src/config.js';
+import { MAX_TEXT_LENGTH, splitSpeech } from '../src/speech.js';
 
 function state(t) {
   const directory = mkdtempSync(join(tmpdir(), 'ai-voice-test-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
-  saveSession(directory, { localCookie: 'fake', refreshToken: 'fake', macDms: {}, amazonPage: 'amazon.com.br' });
+  saveSession(directory, { localCookie: 'csrf=TEST;', refreshToken: 'fake', macDms: {}, amazonPage: 'amazon.com.br', tokenDate: Date.now() });
   return directory;
 }
 
@@ -25,14 +26,16 @@ function fixture(t, online = true) {
     deviceFamily: 'ECHO', deviceOwnerCustomerId: 'TEST-OWNER', online,
   };
   const remote = new AlexaRemote();
-  remote.init = (options, callback) => { remote._options = options; callback(); };
+  remote.checkAuthentication = (callback) => callback(true);
+  remote.getEndpoints = (callback) => callback(null, { websiteApiUrl: 'https://alexa.example' });
   remote.getDevices = (callback) => callback(null, { devices: [device, { deviceFamily: 'WHA', serialNumber: 'GROUP' }] });
   let sent;
   const voice = new AlexaVoice({ stateDir: state(t), speechEnabled: true }, {
     createRemote: () => remote,
     send: async (_, sequence) => { sent = sequence; },
   });
-  return { voice, sent: () => sent };
+  t.after(() => voice.close());
+  return { voice, remote, sent: () => sent };
 }
 
 test('fala bloqueada por padrão, antes de autenticar ou abrir rede', async () => {
@@ -63,9 +66,111 @@ test('gera fala para um único Echo preservando português e números', async (t
 
 test('rejeita vazio, SSML e texto longo antes de conectar', async () => {
   const voice = new AlexaVoice({ speechEnabled: true }, { createRemote: () => { throw new Error('não deve executar'); } });
-  for (const text of ['', '  ', '<speak>Olá</speak>', 'a'.repeat(251)]) {
+  for (const text of ['', '  ', '<speak>Olá</speak>', 'a'.repeat(MAX_TEXT_LENGTH + 1)]) {
     await assert.rejects(voice.speak({ device_serial: 'TEST', text }), /texto simples/);
   }
+});
+
+test('divide textos longos sem quebrar palavras, frases ou emojis na fronteira', () => {
+  const text = 'Uma frase curta em português. '.repeat(60).trim();
+  const parts = splitSpeech(text);
+  assert.ok(parts.length > 1);
+  assert.ok(parts.every((part) => part.length > 0 && part.length <= 250));
+  assert.equal(parts.join(' '), text);
+  for (const edge of ['a'.repeat(249) + '😀oi', 'a'.repeat(250) + '.oi', 'a'.repeat(4000)]) {
+    const chunks = splitSpeech(edge);
+    assert.ok(chunks.every((chunk) => chunk.length <= 250 && chunk.isWellFormed()));
+    assert.equal(chunks.join(''), edge);
+  }
+});
+
+test('usa Echo padrão e envia todos os trechos em um único SerialNode', async (t) => {
+  const { voice, sent } = fixture(t);
+  voice.settings.defaultDevice = 'TEST-ECHO';
+  const text = 'Este é um texto que será falado em partes ordenadas. '.repeat(12).trim();
+  const result = await voice.speak({ text });
+  assert.equal((await voice.devices())[0].is_default, true);
+  const node = sent().startNode;
+  assert.equal(node['@type'], 'com.amazon.alexa.behaviors.model.SerialNode');
+  assert.equal(node.nodesToExecute.length, result.chunks);
+  assert.equal(node.nodesToExecute.map((part) => part.operationPayload.textToSpeak).join(' '), text);
+  assert.ok(node.nodesToExecute.every((part) => part.operationPayload.locale === 'pt-BR' && part.operationPayload.deviceSerialNumber === 'TEST-ECHO'));
+});
+
+test('não escolhe destino automaticamente quando não há Echo padrão', async (t) => {
+  const { voice, sent } = fixture(t);
+  await assert.rejects(voice.speak({ text: 'Teste' }), /AI_VOICE_DEFAULT_DEVICE/);
+  assert.equal(sent(), undefined);
+});
+
+test('renova sessão antiga e persiste os tokens sem abrir proxy', async (t) => {
+  const { voice, remote } = fixture(t);
+  const previous = loadSession(voice.settings.stateDir);
+  previous.tokenDate = Date.now() - 25 * 60 * 60 * 1000;
+  saveSession(voice.settings.stateDir, previous);
+  let refreshes = 0;
+  remote.refreshCookie = (callback) => {
+    assert.equal(remote._options.setupProxy, false);
+    refreshes++;
+    callback(null, { ...previous, localCookie: 'csrf=RENEWED;', refreshToken: 'new-token', macDms: { token: 'new-jwt' }, tokenDate: Date.now() });
+  };
+  await voice.devices();
+  assert.equal(refreshes, 1);
+  assert.equal(loadSession(voice.settings.stateDir).refreshToken, 'new-token');
+  assert.equal(remote.csrf, 'RENEWED');
+  assert.deepEqual(remote.macDms, { token: 'new-jwt' });
+});
+
+test('refresh após cookie inválido ocorre uma vez; falha não entra em loop', async (t) => {
+  const { voice, remote } = fixture(t);
+  let refreshes = 0;
+  remote.checkAuthentication = (callback) => callback(false);
+  remote.refreshCookie = (callback) => {
+    refreshes++;
+    callback(null, loadSession(voice.settings.stateDir));
+  };
+  await assert.rejects(voice.devices(), /Sessão Amazon inválida/);
+  assert.equal(refreshes, 1);
+  assert.equal(voice.connecting, undefined);
+});
+
+test('processo persistente verifica autenticação novamente após 30 minutos', async (t) => {
+  const { voice, remote } = fixture(t);
+  let checks = 0;
+  remote.checkAuthentication = (callback) => { checks++; callback(true); };
+  await voice.devices();
+  await voice.devices();
+  assert.equal(checks, 1);
+  voice.connectedAt = Date.now() - 31 * 60 * 1000;
+  await voice.devices();
+  assert.equal(checks, 2);
+});
+
+test('falha na renovação orienta novo login e permite tentar novamente', async (t) => {
+  const { voice, remote } = fixture(t);
+  remote.checkAuthentication = (callback) => callback(false);
+  remote.refreshCookie = (callback) => callback(new Error('SECRET-TOKEN'));
+  await assert.rejects(voice.devices(), /npm run login/);
+  assert.equal(voice.connecting, undefined);
+  remote.checkAuthentication = (callback) => callback(true);
+  assert.equal((await voice.devices()).length, 1);
+});
+
+test('rejeita envio concorrente e nunca repete fala quando transporte falha', async (t) => {
+  const { voice } = fixture(t);
+  let fail;
+  let sends = 0;
+  voice.send = () => {
+    sends++;
+    return new Promise((_, reject) => { fail = reject; });
+  };
+  const first = voice.speak({ device_serial: 'TEST-ECHO', text: 'Teste' });
+  await assert.rejects(voice.speak({ device_serial: 'TEST-ECHO', text: 'Outro teste' }), /em andamento/);
+  await new Promise((resolve) => setImmediate(resolve));
+  fail(new Error('Falha simulada'));
+  await assert.rejects(first, /Falha simulada/);
+  assert.equal(sends, 1);
+  assert.equal(voice.speaking, false);
 });
 
 test('exclui grupos e rejeita dispositivo inexistente/offline sem envio', async (t) => {

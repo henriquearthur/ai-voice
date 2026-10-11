@@ -2,6 +2,10 @@
 
 Investigação documental em 11/10/2026. Nenhuma sessão Amazon foi aberta, credencial foi lida ou fala/comando foi enviado. A pesquisa anterior do IoTBar foi consultada por `gh api` somente leitura no commit indicado pelo usuário. Este documento complementa seu recorte de APIs oficiais: [pesquisa original](https://github.com/henriquearthur/iotbar/blob/b86273317dcadafef47d3b3d4e5c61fa507c0a2e/docs/alexa-integration-research.md).
 
+## Validação real
+
+Em 11/10/2026, depois desta pesquisa, o usuário autorizou e confirmou dois testes audíveis em um Echo Dot de uma conta `amazon.com.br`: login por proxy local, listagem e fala em pt-BR funcionaram. A renovação de tokens por `refreshCookie` também foi exercitada com sucesso, sem áudio. O restante deste documento conserva a análise documental feita antes desses testes; os trechos marcados como não confirmados referem-se àquele momento. Seguem sem validação: sequências com vários trechos, outros modelos de Echo, não perturbe e limites do backend.
+
 ## Conclusão e mínimo recomendado
 
 É viável implementar uma ponte Node.js pequena com `alexa-remote2`, usando as interfaces internas da aplicação Alexa. Isso é uma integração comunitária, sem contrato de estabilidade da Amazon; funcionamento na conta brasileira e reprodução no Echo do usuário permanecem **não confirmados**. O pacote atual examinado é `alexa-remote2@8.1.1`, Node ≥16; a aplicação deve usar uma versão Node ainda suportada. [Pacote e requisitos](https://github.com/Apollon77/alexa-remote/blob/f97a934c2d98508c4c9e2823930adaf35c710ee7/package.json)

@@ -2,7 +2,7 @@ import AlexaCookie from 'alexa-cookie2';
 import { mkdirSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from './config.js';
-import { saveSession } from './session.js';
+import { loadSession, saveSession } from './session.js';
 import { AlexaVoice } from './alexa.js';
 
 process.umask(0o077);
@@ -13,6 +13,8 @@ try {
   if (action === 'login') {
     mkdirSync(settings.stateDir, { recursive: true, mode: 0o700 });
     chmodSync(settings.stateDir, 0o700);
+    let formerRegistrationData;
+    try { formerRegistrationData = loadSession(settings.stateDir); } catch { /* Primeiro login. */ }
     const stop = () => { AlexaCookie.stopProxyServer(); };
     process.once('SIGINT', () => { stop(); process.exit(130); });
     process.once('SIGTERM', () => { stop(); process.exit(143); });
@@ -29,6 +31,7 @@ try {
         proxyListenBind: '127.0.0.1',
         proxyPort: 3456,
         formerDataStorePath: join(settings.stateDir, 'registration.json'),
+        formerRegistrationData,
       }, (error, session) => {
         if (error?.message.includes('Please open http://')) {
           console.error('Abra http://127.0.0.1:3456/ no navegador deste Mac e faça login na Amazon (incluindo MFA). Nenhum áudio será enviado.');

@@ -7,5 +7,6 @@ export function config(env = process.env) {
     amazonPage: env.AI_VOICE_AMAZON_PAGE || 'amazon.com.br',
     alexaServiceHost: env.AI_VOICE_ALEXA_HOST || undefined,
     speechEnabled: env.AI_VOICE_ENABLE_SPEECH === '1',
+    defaultDevice: env.AI_VOICE_DEFAULT_DEVICE || undefined,
   };
 }

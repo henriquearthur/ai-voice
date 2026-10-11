@@ -1,15 +1,17 @@
 import https from 'node:https';
 import AlexaRemote from 'alexa-remote2';
 import { loadSession, saveSession } from './session.js';
+import { splitSpeech, speechSequence } from './speech.js';
+
+const AUTH_CHECK_INTERVAL = 30 * 60 * 1000;
+const TOKEN_REFRESH_INTERVAL = 24 * 60 * 60 * 1000;
 
 export function validateSpeech({ device_serial, text }, settings) {
   if (!settings.speechEnabled) {
     throw new Error('Fala bloqueada. Após autorização do usuário, configure AI_VOICE_ENABLE_SPEECH=1 e reinicie o MCP.');
   }
-  if (typeof device_serial !== 'string' || !device_serial.trim()) throw new Error('Informe o serial de um Echo.');
-  if (typeof text !== 'string' || !text.trim() || text.length > 250 || /[<>]/u.test(text)) {
-    throw new Error('Use texto simples entre 1 e 250 caracteres, sem SSML.');
-  }
+  if (typeof device_serial !== 'string' || !device_serial.trim()) throw new Error('Informe device_serial ou configure AI_VOICE_DEFAULT_DEVICE.');
+  return splitSpeech(text);
 }
 
 // Um envio apenas: timeout/erro não autoriza repetir uma fala possivelmente recebida.
@@ -26,7 +28,7 @@ export function postSpeech(remote, sequence) {
         'Content-Length': Buffer.byteLength(data),
         Cookie: remote.cookie,
         csrf: remote.csrf,
-        'User-Agent': 'AI-Voice/0.1.0',
+        'User-Agent': 'AI-Voice/0.2.0',
         'Accept-Language': 'pt-BR',
         Origin: `https://${remote.baseUrl}`,
         Referer: `https://${remote.baseUrl}/spa/index.html`,
@@ -69,6 +71,7 @@ export class AlexaVoice {
   }
 
   async connect() {
+    if (this.connectedAt && Date.now() - this.connectedAt >= AUTH_CHECK_INTERVAL) this.close();
     if (this.connecting) return this.connecting;
     this.connecting = this.initialize().catch((error) => {
       this.close();
@@ -81,60 +84,95 @@ export class AlexaVoice {
   async initialize() {
     const session = loadSession(this.settings.stateDir);
     const remote = this.remote = this.createRemote();
-    remote.on('cookie', () => {
-      if (remote.cookieData?.refreshToken) saveSession(this.settings.stateDir, remote.cookieData);
-    });
-    await new Promise((resolve, reject) => {
-      remote.init({
-        cookie: session,
-        formerRegistrationData: session,
-        amazonPage: session.amazonPage || this.settings.amazonPage,
-        alexaServiceHost: this.settings.alexaServiceHost,
-        acceptLanguage: 'pt-BR',
-        setupProxy: false,
-        cookieRefreshInterval: 0,
-        usePushConnection: false,
-        bluetooth: false,
-        notifications: false,
-        // Não habilitar logger: a biblioteca registra cookies/tokens em debug.
-      }, (error) => error ? reject(new Error('Não foi possível autenticar na Alexa. Execute npm run login.')) : resolve());
-    });
+    // Inicializar só autenticação e endpoint. Evitar init(), que pode repetir login
+    // recursivamente e consultar recursos que este MCP não usa.
+    remote._options = {
+      amazonPage: session.amazonPage || this.settings.amazonPage,
+      baseAmazonPage: 'amazon.com',
+      acceptLanguage: 'pt-BR',
+      apiUserAgentPostfix: 'AI-Voice/0.2.0',
+      setupProxy: false,
+      // Sem logger: a biblioteca registra cookies/tokens em debug.
+    };
+    remote.baseUrl = this.settings.alexaServiceHost || `alexa.${remote._options.amazonPage}`;
+    remote.setCookie(session);
+    const refresh = async () => {
+      const renewed = await new Promise((resolve, reject) => remote.refreshCookie((error, result) => {
+        if (error || !result?.localCookie || !result?.refreshToken || !result?.macDms) {
+          return reject(new Error('Sessão Amazon expirou e não pôde ser renovada. Execute npm run login.'));
+        }
+        resolve(result);
+      }));
+      // setCookie conserva macDms prévio; atualizar também o token renovado.
+      remote._options.macDms = renewed.macDms;
+      remote.setCookie(renewed);
+      saveSession(this.settings.stateDir, renewed);
+    };
+    let refreshed = false;
+    if (!session.tokenDate || Date.now() - session.tokenDate >= TOKEN_REFRESH_INTERVAL) {
+      await refresh();
+      refreshed = true;
+    }
+    const authenticated = () => new Promise((resolve, reject) => remote.checkAuthentication((valid, error) => {
+      if (valid === null) return reject(new Error('Não foi possível conectar à Alexa. Verifique a conexão e tente novamente.'));
+      resolve(valid === true && !error);
+    }));
+    if (!await authenticated()) {
+      if (refreshed) throw new Error('Sessão Amazon inválida. Execute npm run login.');
+      await refresh();
+      if (!await authenticated()) throw new Error('Sessão Amazon inválida. Execute npm run login.');
+    }
+    remote.lastAuthCheck = Date.now();
+    const endpoints = await new Promise((resolve) => remote.getEndpoints((error, result) => resolve(error ? undefined : result)));
+    if (endpoints?.websiteApiUrl) {
+      remote.baseUrl = new URL(endpoints.websiteApiUrl).hostname;
+    }
+    this.connectedAt = Date.now();
     return remote;
   }
 
   async devices() {
     const remote = await this.connect();
     const result = await new Promise((resolve, reject) => remote.getDevices((error, result) => {
-      if (error || !Array.isArray(result?.devices)) return reject(new Error('Não foi possível listar dispositivos Alexa.'));
+      if (error || !Array.isArray(result?.devices)) {
+        this.close();
+        return reject(new Error('Não foi possível listar dispositivos Alexa. A próxima chamada verificará a sessão novamente.'));
+      }
       resolve(result);
     }));
-    // Excluir apps, grupos e outros dispositivos: a prova visa um Echo físico por vez.
-    this.echoes = result.devices.filter((device) => device.deviceFamily === 'ECHO');
-    return this.echoes.map((device) => ({
+    // Excluir apps, grupos e outros dispositivos: um Echo físico por chamada.
+    const echoes = result.devices.filter((device) => device.deviceFamily === 'ECHO');
+    this.echoes = echoes;
+    return echoes.map((device) => ({
       name: device.accountName,
       serial: device.serialNumber,
       online: device.online,
-      capabilities: device.capabilities || [],
+      is_default: device.serialNumber === this.settings.defaultDevice,
     }));
   }
 
   async speak(args) {
-    validateSpeech(args, this.settings); // Bloqueio antes de ler sessão ou abrir rede.
-    await this.devices();
-    const device = this.echoes.find((item) => item.serialNumber === args.device_serial);
-    if (!device) throw new Error('Echo não encontrado. Use um serial retornado por list_devices.');
-    if (!device.online) throw new Error('Echo está offline.');
-    const remote = await this.connect();
-    // A fábrica da biblioteca usa de-DE e pode transformar números: preservar o texto.
-    remote.serialNumbers[device.serialNumber] = device;
-    const startNode = remote.createSequenceNode('speak', args.text, device.serialNumber);
-    startNode.operationPayload.locale = 'pt-BR';
-    startNode.operationPayload.textToSpeak = args.text;
-    await this.send(remote, { '@type': 'com.amazon.alexa.behaviors.model.Sequence', startNode });
-    return { status: 'accepted', device: device.accountName, playback_confirmed: false };
+    const serial = args.device_serial || this.settings.defaultDevice;
+    const chunks = validateSpeech({ ...args, device_serial: serial }, this.settings);
+    if (this.speaking) throw new Error('Já existe um envio de fala em andamento neste servidor. Aguarde sua conclusão.');
+    this.speaking = true;
+    try {
+      await this.devices();
+      const device = this.echoes.find((item) => item.serialNumber === serial);
+      if (!device) throw new Error('Echo não encontrado. Use um serial retornado por list_devices.');
+      if (!device.online) throw new Error('Echo está offline.');
+      const remote = await this.connect();
+      await this.send(remote, speechSequence(remote, device, chunks));
+      return { status: 'accepted', device: device.accountName, chunks: chunks.length, playback_confirmed: false };
+    } finally {
+      this.speaking = false;
+    }
   }
 
   close() {
     this.remote?.stop();
+    this.remote = undefined;
+    this.connecting = undefined;
+    this.connectedAt = undefined;
   }
 }
