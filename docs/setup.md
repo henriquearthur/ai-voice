@@ -62,6 +62,40 @@ No Claude Desktop, acrescente o servidor ao objeto `mcpServers` de `~/Library/Ap
 
 Reinicie ou reconecte o cliente após configurar. Referências: [Claude Code](https://code.claude.com/docs/en/mcp), [Claude Desktop](https://modelcontextprotocol.io/docs/develop/connect-local-servers), [Codex](https://developers.openai.com/codex/mcp/).
 
+## Servir pela rede
+
+Para uma máquina hospedar o AI Voice e outras o usarem, defina `AI_VOICE_HTTP_PORT`: o servidor passa a atender MCP por HTTP em `/mcp`, no lugar de stdio. A sessão Amazon fica só na máquina que hospeda.
+
+O endpoint não tem autenticação: quem alcança a porta pode listar os Echos e falar neles. Use `AI_VOICE_HTTP_HOST` com um endereço de rede privada, como o IP Tailscale da máquina; o padrão é `127.0.0.1`. Requisições com cabeçalho `Origin` (navegadores) são recusadas.
+
+Exemplo de serviço systemd de usuário, em `~/.config/systemd/user/ai-voice.service`:
+
+```ini
+[Unit]
+Description=AI Voice MCP
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/CAMINHO/ai-voice
+Environment=AI_VOICE_HTTP_HOST=IP-TAILSCALE
+Environment=AI_VOICE_HTTP_PORT=7347
+Environment=AI_VOICE_ENABLE_SPEECH=1
+Environment=AI_VOICE_DEFAULT_DEVICE=SERIAL
+ExecStart=/CAMINHO/NODE src/server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+```
+
+Ative com `systemctl --user enable --now ai-voice` e cadastre em cada cliente:
+
+```sh
+claude mcp add ai-voice --scope user --transport http http://HOST:7347/mcp
+```
+
 ## Usar
 
 Peça ao cliente uma resposta falada; ele chama `speak` com o texto. Não há envio de fala na inicialização, no login ou na listagem.
@@ -78,6 +112,8 @@ A sessão é renovada sem novo login: o servidor renova os tokens quando têm ma
 | --- | --- | --- |
 | `AI_VOICE_ENABLE_SPEECH` | bloqueado | Só o valor `1` habilita fala |
 | `AI_VOICE_DEFAULT_DEVICE` | nenhum | Serial do Echo usado quando `speak` não recebe `device_serial` |
+| `AI_VOICE_HTTP_PORT` | stdio | Porta para servir MCP por HTTP em `/mcp` |
+| `AI_VOICE_HTTP_HOST` | `127.0.0.1` | Endereço de escuta do modo HTTP |
 | `AI_VOICE_STATE_DIR` | `~/.local/share/ai-voice` | Diretório de sessão; use o mesmo no login e nos clientes |
 | `AI_VOICE_AMAZON_PAGE` | `amazon.com.br` | Marketplace inicial do login; a sessão conserva a região retornada |
 | `AI_VOICE_ALEXA_HOST` | derivado do marketplace | Host inicial opcional da API, sem `https://`; descoberta Amazon pode atualizá-lo |

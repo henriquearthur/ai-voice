@@ -8,5 +8,7 @@ export function config(env = process.env) {
     alexaServiceHost: env.AI_VOICE_ALEXA_HOST || undefined,
     speechEnabled: env.AI_VOICE_ENABLE_SPEECH === '1',
     defaultDevice: env.AI_VOICE_DEFAULT_DEVICE || undefined,
+    httpPort: env.AI_VOICE_HTTP_PORT ? Number(env.AI_VOICE_HTTP_PORT) : undefined,
+    httpHost: env.AI_VOICE_HTTP_HOST || '127.0.0.1',
   };
 }

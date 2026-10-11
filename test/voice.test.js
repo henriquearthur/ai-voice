@@ -6,12 +6,14 @@ import { tmpdir } from 'node:os';
 import { EventEmitter } from 'node:events';
 import https from 'node:https';
 import AlexaRemote from 'alexa-remote2';
-import { Client } from '@modelcontextprotocol/client';
+import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { AlexaVoice, postSpeech } from '../src/alexa.js';
 import { saveSession, loadSession } from '../src/session.js';
 import { config } from '../src/config.js';
 import { MAX_TEXT_LENGTH, splitSpeech } from '../src/speech.js';
+import { createServer } from '../src/mcp.js';
+import { serveHttp } from '../src/http.js';
 
 function state(t) {
   const directory = mkdtempSync(join(tmpdir(), 'ai-voice-test-'));
@@ -233,4 +235,25 @@ test('MCP real via stdio: handshake, descoberta, bloqueio de fala e sessão ause
     assert.equal(devices.isError, true);
     assert.match(devices.content[0].text, /Sessão Amazon ausente/);
   } finally { await client.close(); }
+});
+
+test('MCP via HTTP: ferramentas em /mcp, bloqueio de fala e recusa de navegador', async (t) => {
+  const directory = mkdtempSync(join(tmpdir(), 'ai-voice-http-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const voice = new AlexaVoice(config({ AI_VOICE_STATE_DIR: directory }));
+  const handle = await serveHttp(() => createServer(voice), { host: '127.0.0.1', port: 0 });
+  t.after(() => handle.close());
+  const url = `http://127.0.0.1:${handle.port}/mcp`;
+  const client = new Client({ name: 'ai-voice-test', version: '1.0.0' });
+  try {
+    await client.connect(new StreamableHTTPClientTransport(new URL(url)));
+    const tools = await client.listTools();
+    assert.deepEqual(tools.tools.map((tool) => tool.name).sort(), ['list_devices', 'speak']);
+    const result = await client.callTool({ name: 'speak', arguments: { device_serial: 'TEST', text: 'Teste' } });
+    assert.equal(result.isError, true);
+    assert.match(result.content[0].text, /Fala bloqueada/);
+  } finally { await client.close(); }
+  const browser = await fetch(url, { method: 'POST', headers: { Origin: 'https://example.com', 'Content-Type': 'application/json' }, body: '{}' });
+  assert.equal(browser.status, 403);
+  assert.equal((await fetch(`http://127.0.0.1:${handle.port}/`)).status, 404);
 });
