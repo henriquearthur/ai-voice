@@ -146,7 +146,7 @@ npm test
 
 Tests use simulated Amazon devices and transport, need no Amazon account and play no audio. The MCP tests run a real client over stdio and HTTP.
 
-Publishing a GitHub release whose tag matches the version in `package.json` (for example `v0.3.0`) publishes that version to npm from GitHub Actions.
+Every push to `main` publishes a new patch version to npm and creates the matching GitHub release, from GitHub Actions. The workflow picks the version, so `package.json` is not updated on each release. For a minor or major release, set that version in `package.json` in the pull request.
 
 Issues and pull requests are welcome. Reports from marketplaces, locales and Echo models other than the ones listed in [what was validated](docs/alexa-integration.md#what-was-validated) are especially useful.
 
