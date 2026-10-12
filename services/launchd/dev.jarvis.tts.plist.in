@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Modelo do LaunchAgent do servidor de voz Kokoro. O scripts/setup.sh troca os marcadores entre arrobas e grava
+     o resultado em ~/Library/LaunchAgents/dev.jarvis.tts.plist. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>dev.jarvis.tts</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>@TTS_HOME@/.venv/bin/python</string>
+    <string>-I</string>
+    <string>@TTS_HOME@/server.py</string>
+  </array>
+  <key>WorkingDirectory</key><string>@TTS_HOME@</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HF_HUB_OFFLINE</key><string>1</string>
+    <key>HF_HOME</key><string>@TTS_HOME@/hf-cache</string>
+    <key>PYTHONUNBUFFERED</key><string>1</string>
+    <key>JARVIS_TTS_VOICE</key><string>@AI_VOICE_TTS_VOICE@</string>
+    <key>JARVIS_TTS_SPEED</key><string>1.15</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>ProcessType</key><string>Interactive</string>
+  <key>StandardOutPath</key><string>@TTS_HOME@/logs/server.out.log</string>
+  <key>StandardErrorPath</key><string>@TTS_HOME@/logs/server.err.log</string>
+</dict>
+</plist>

@@ -1,0 +1,23 @@
+{
+  "name": "@jarvis/announce",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@jarvis/alexa": "workspace:*",
+    "effect": "4.0.3"
+  },
+  "devDependencies": {
+    "@effect/vitest": "4.0.3",
+    "@types/bun": "^1.3.14",
+    "@types/node": "^24",
+    "vitest": "5.0.3"
+  }
+}

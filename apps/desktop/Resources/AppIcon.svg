@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Ícone do app Jarvis no grid do macOS (corpo 824 px com margem de 100 px), a partir do icon.svg do dashboard. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b3266"/>
+      <stop offset="1" stop-color="#151a36"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(100 100) scale(25.75)">
+    <rect width="32" height="32" rx="7.2" fill="url(#bg)"/>
+    <g transform="translate(16 16) scale(0.72) translate(-16.25 -16.25)">
+      <path d="M19 8v11.5a5 5 0 0 1-10 0" fill="none" stroke="#f2f4fa" stroke-width="3.2" stroke-linecap="round"/>
+      <circle cx="23.5" cy="8.5" r="2.5" fill="#d0542b"/>
+    </g>
+  </g>
+</svg>

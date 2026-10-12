@@ -1,0 +1,67 @@
+#!/bin/zsh
+# Hooks Notification e Stop do Claude Code: avisa em voz alta, em pt-BR, quando uma sessão precisa de você.
+# - Notification: pedido de permissão, sessão parada esperando ou pergunta em diálogo.
+# - Stop: só quando a resposta termina com pergunta; o Haiku reescreve a pergunta como uma frase falada.
+# Fala pelo jarvis-fala (voz local Kokoro, com fallback para o `say`), uma fala por vez na máquina.
+# Instalado pelo scripts/setup.sh do repositório Jarvis; ligue-o no ~/.claude/settings.json (veja o README).
+STATE=$HOME/.local/state/jarvis-avisa
+COOLDOWN=${JARVIS_AVISA_INTERVALO:-60}
+VOICE_MARK=${JARVIS_VOZ_MARCADOR:-'[voz do '}
+CLAUDE=$(command -v claude || print -r -- "$HOME/.local/bin/claude")
+
+input=$(cat)
+# Voz única: só o chefe (ou sessão sem JARVIS_BOT) fala; o descarte e o evento ficam no jarvis-fala.
+[[ -n ${JARVIS_BOT:-} && $JARVIS_BOT != chefe ]] && exit 0
+[[ -n $ALEXA_NOTIFY_INNER || -n $JARVIS_FALA_INNER ]] && exit 0
+command -v jq >/dev/null || exit 0
+event=$(print -r -- "$input" | jq -r '.hook_event_name // ""')
+proj=$(print -r -- "$input" | jq -r '.cwd // ""' | xargs basename 2>/dev/null)
+
+if [[ $event == Stop ]]; then
+  type=pergunta
+  # Pedido de voz: quem responde falando é o jarvis-fala-resposta; aqui fica quieto para não falar duas vezes.
+  # Sessões em voz-sempre já falam a resposta inteira pelo jarvis-fala-resposta.
+  sid=$(print -r -- "$input" | jq -r '.session_id // empty')
+  [[ -n $sid ]] && grep -qxF -- "$sid" $HOME/.local/share/jarvis/voz-sempre 2>/dev/null && exit 0
+  tp=$(print -r -- "$input" | jq -r '.transcript_path // empty')
+  if [[ -f $tp ]]; then
+    lastuser=$(tail -n 400 "$tp" | jq -rs '[.[] | select(.type=="user") | .message.content | if type=="string" then . else ([.[]? | select(.type=="text") | .text] | join(" ")) end | select(length > 0)] | last // ""')
+    [[ $lastuser == "$VOICE_MARK"* ]] && exit 0
+  fi
+  last=$(print -r -- "$input" | jq -r '.last_assistant_message // empty')
+  if [[ -z $last && -f $tp ]]; then
+    last=$(tail -n 200 "$tp" | jq -rs '[.[] | select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text] | last // empty')
+  fi
+  # Só fala se o fim da resposta tem pergunta; fala a(s) pergunta(s) do último parágrafo com "?".
+  q=$(print -r -- "$last" | grep '?' | tail -n 3 | tr '\n' ' ' | sed -E 's/[`*_#>|]//g; s/\[[^]]*\]\([^)]*\)//g; s/  +/ /g')
+  [[ -z $q ]] && exit 0
+  # A pergunta crua pode vir em inglês ou cheia de jargão: o Haiku reescreve como uma frase falada em português.
+  # ALEXA_NOTIFY_INNER impede que o Stop desse `claude -p` dispare este hook de novo.
+  [[ -x $CLAUDE ]] || exit 0
+  text=$(print -r -- "$q" | ALEXA_NOTIFY_INNER=1 "$CLAUDE" -p --model haiku --strict-mcp-config \
+    'Reescreva a pergunta abaixo como UMA frase curta para ser falada em voz alta, em português do Brasil natural, em primeira pessoa, como alguém do lado conversando. Zero palavras em inglês, zero siglas, zero nomes de arquivo, código, links ou nomes de ferramentas: troque termos técnicos por palavras comuns em português. Não diga quem está falando e não comece com o nome de ninguém. Responda só com a frase.' 2>/dev/null \
+    | tr '\n' ' ' | sed -E 's/[<>`*_#|]//g; s/  +/ /g; s/^ //; s/ $//')
+  # Sem reescrita confiável, melhor ficar quieto do que falar inglês ou uma frase vazia.
+  [[ -z $text ]] && exit 0
+else
+  type=$(print -r -- "$input" | jq -r '.notification_type // "geral"')
+  case "$type" in
+    permission_prompt) text="Preciso da sua permissão pra continuar." ;;
+    idle_prompt)       text="Tô te esperando." ;;
+    elicitation_dialog) text="Tem uma pergunta pra você responder." ;;
+    *) exit 0 ;;
+  esac
+fi
+# Nada de caminhos, URLs ou tokens na fala.
+text=$(print -r -- "$text" | sed -E 's#(https?://|~?/)[^ ]*##g; s#[A-Za-z0-9_-]{24,}##g' | cut -c1-300)
+
+mkdir -p -m 700 "$STATE"
+key=$(print -r -- "$proj-$type" | tr -c 'A-Za-z0-9_-' '_')
+lastts=$(cat "$STATE/$key" 2>/dev/null || echo 0)
+now=$(date +%s)
+(( now - lastts < COOLDOWN )) && exit 0
+print $now > "$STATE/$key"
+
+# Uma fala por vez em toda a máquina (mesmo lock do servidor MCP e do jarvis-fala).
+$HOME/.local/bin/jarvis-fala "$text" >/dev/null 2>&1
+exit 0

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "env": ["AI_VOICE_*"],
+      "outputs": ["build/**", ".svelte-kit/**"]
+    },
+    "check": {
+      "dependsOn": ["^check"],
+      "env": ["AI_VOICE_*"]
+    },
+    "test": {
+      "dependsOn": ["^check"],
+      "env": ["AI_VOICE_*"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "env": ["AI_VOICE_*"]
+    }
+  }
+}

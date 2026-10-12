@@ -1,0 +1,56 @@
+#!/bin/bash
+# jarvis-cala: interrompe o Jarvis e LIMPA A FILA de falas. Único ponto de interrupção.
+#   1. grava um token novo no marcador de cancelamento (fala.cancel): toda fala que entrou na fila
+#      antes deste instante (fala-kokoro.sh/jarvis-fala, speak do MCP) ao conseguir o lock vê o
+#      marcador mudado, não toca e registra motor=descartada no fala.log;
+#   2. encerra (SIGTERM) a fala em curso: o lockf que segura o lock e tudo que desce dele (script,
+#      afplay, say, curl). Quem só espera na fila (lockf sem filhos) não é morto, para registrar o
+#      descarte; falas que entram depois tocam normalmente.
+# Não mexe no que a Escuta ouve. Imprime uma linha "pid comando" por processo encerrado.
+# Ambiente: JARVIS_FALA_LOCK (ou AI_VOICE_MAC_LOCK), JARVIS_FALA_CANCEL (padrão: fala.cancel ao
+# lado do lock). Ganchos: barge-in da Escuta (Speaker.stop), atalho, botão do dashboard, app bar.
+set -u
+LOCK="${JARVIS_FALA_LOCK:-${AI_VOICE_MAC_LOCK:-$HOME/.local/share/jarvis/fala.lock}}"
+CANCEL="${JARVIS_FALA_CANCEL:-$(dirname "$LOCK")/fala.cancel}"
+mkdir -p "$(dirname "$CANCEL")"
+
+# 1) Snapshot ANTES do marcador: uma fala nova que pegue o lock depois disto não está na lista e
+#    não leva SIGTERM (ela mesma vê o marcador novo ou toca normalmente).
+# Donos do lock: lockf com filho direto que seja uma fala do Jarvis (fala-kokoro.sh, afplay, say ou o
+# guard `sh -c` do speak do MCP). Outro dono (ex.: bench que usa `lockf fala.lock <bench>`) não é
+# morto: só aviso em stderr. Quem espera na fila (lockf sem filhos) e a Escuta (que só confere o
+# lock) são ignorados.
+HOLDERS=""
+if [ -e "$LOCK" ]; then
+  pid=""
+  while IFS= read -r l; do
+    case "$l" in
+      p*) pid="${l#p}" ;;
+      c*)
+        [ "${l#c}" = "lockf" ] || continue
+        kid="$(/usr/bin/pgrep -P "$pid" 2>/dev/null | head -1)"
+        [ -n "$kid" ] || continue
+        kargs="$(/bin/ps -o args= -p "$kid" 2>/dev/null | head -1)"
+        kcomm="$(/bin/ps -o comm= -p "$kid" 2>/dev/null | head -1)"
+        kcomm="${kcomm##*/}"
+        case "$kcomm:$kargs" in
+          afplay:*|say:*|*fala-kokoro.sh*|*'/sh -c [ "$(cat "$1"'*'exec "$@"'*) HOLDERS="$HOLDERS $pid" ;;
+          *) echo "jarvis-cala: dono do lock ignorado (não é fala do Jarvis): lockf pid=$pid filho=$kid cmd=$kargs" >&2 ;;
+        esac ;;
+    esac
+  done < <(/usr/sbin/lsof -F pc -- "$LOCK" 2>/dev/null)
+fi
+desc() { for p in $1; do for c in $(/usr/bin/pgrep -P "$p"); do echo "$c"; desc "$c"; done; done; }
+ALL=""
+[ -n "$HOLDERS" ] && ALL="$(for h in $HOLDERS; do echo "$h"; desc "$h"; done | sort -rn | uniq)"
+
+# 2) Marcador (escrita atômica): toda fala na fila ao conseguir o lock vê o marcador mudado.
+TOKEN="$(date +%s).$$.$RANDOM$RANDOM"
+printf '%s\n' "$TOKEN" >"$CANCEL.$$" && mv -f "$CANCEL.$$" "$CANCEL"
+
+# 3) Mata só o snapshot.
+for p in $ALL; do
+  cmd="$(/bin/ps -o comm= -p "$p" 2>/dev/null | head -1)"
+  kill -TERM "$p" 2>/dev/null && echo "$p ${cmd##*/}"
+done
+exit 0

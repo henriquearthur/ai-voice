@@ -1,0 +1,34 @@
+{
+  "name": "@jarvis/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "jarvis-voice": "./src/main.ts",
+    "jarvis-callback": "./src/callback-main.ts"
+  },
+  "scripts": {
+    "dev": "AI_VOICE_HTTP_PORT=7347 bun --watch src/main.ts",
+    "dev:callback": "bun --watch src/callback-main.ts",
+    "callback": "bun src/callback-main.ts",
+    "check": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "4.0.3",
+    "@jarvis/alexa": "workspace:*",
+    "@jarvis/announce": "workspace:*",
+    "@jarvis/apple": "workspace:*",
+    "@jarvis/grokbot": "workspace:*",
+    "@jarvis/quadro": "workspace:*",
+    "@jarvis/telemetry": "workspace:*",
+    "@jarvis/voice": "workspace:*",
+    "effect": "4.0.3"
+  },
+  "devDependencies": {
+    "@effect/vitest": "4.0.3",
+    "@types/bun": "^1.3.14",
+    "vitest": "5.0.3"
+  }
+}

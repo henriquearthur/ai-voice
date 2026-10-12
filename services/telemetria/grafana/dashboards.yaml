@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: "Jarvis"
+    type: file
+    allowUiUpdates: false
+    updateIntervalSeconds: 10
+    options:
+      path: /otel-lgtm/jarvis
+      foldersFromFilesStructure: false

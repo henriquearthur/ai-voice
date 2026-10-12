@@ -1,0 +1,10 @@
+{
+  "rotinas": [
+    {
+      "nome": "bom-dia",
+      "horario": "08:30",
+      "dias": ["seg", "ter", "qua", "qui", "sex"],
+      "texto": "Bom dia. Delegue um resumo da agenda de hoje e fale comigo em uma frase."
+    }
+  ]
+}

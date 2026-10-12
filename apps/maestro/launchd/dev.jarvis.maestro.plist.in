@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Modelo do LaunchAgent do vigia do maestro: a cada 60 s confere se o agente existe no herdr
+     e, se sumiu, recria o pane e retoma a sessão salva. O apps/maestro/install.sh renderiza este modelo. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>dev.jarvis.maestro</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>@BUN@</string>
+    <string>@REPO@/apps/maestro/src/vigia-main.ts</string>
+  </array>
+  <key>WorkingDirectory</key><string>@REPO@/apps/maestro</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>JARVIS_MAESTRO_NOME</key><string>@NOME@</string>
+    <key>JARVIS_MAESTRO_DIR</key><string>@DIR@</string>
+    <key>JARVIS_MAESTRO_WORKSPACE</key><string>@WORKSPACE@</string>
+    <key>JARVIS_HERDR</key><string>@HERDR@</string>
+    <key>JARVIS_FALA</key><string>@FALA@</string>
+    <key>PATH</key><string>@HOME@/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>StartInterval</key><integer>60</integer>
+  <key>StandardOutPath</key><string>@DIR@/logs/vigia.out.log</string>
+  <key>StandardErrorPath</key><string>@DIR@/logs/vigia.err.log</string>
+</dict>
+</plist>

@@ -1,0 +1,13 @@
+#!/bin/zsh
+# Sobe o MCP stdio do Jarvis (apps/mcp) lendo os segredos do Grok Bot do Keychain na hora,
+# para eles nunca ficarem gravados em texto puro na config do Claude Code.
+# Sem os itens no Keychain, o servidor sobe só sem o grokbot_send.
+# Gerado pelo scripts/setup.sh a partir de services/bin/jarvis-mcp-stdio.in: não edite a cópia instalada.
+secret() { /usr/bin/security find-generic-password -a jarvis -s "$1" -w 2>/dev/null }
+
+url=$(secret jarvis-grokbot-webhook-url)
+key=$(secret jarvis-grokbot-key)
+[[ -n $url ]] && export GROKBOT_WEBHOOK_URL=$url
+[[ -n $key ]] && export GROKBOT_KEY=$key
+
+exec "@BUN@" "@REPO@/apps/mcp/src/main.ts" "$@"

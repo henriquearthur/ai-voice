@@ -1,0 +1,23 @@
+{
+  "name": "@jarvis/voice",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "effect": "4.0.3"
+  },
+  "devDependencies": {
+    "@effect/platform-bun": "4.0.3",
+    "@effect/vitest": "4.0.3",
+    "@types/bun": "^1.3.14",
+    "@types/node": "^24",
+    "vitest": "5.0.3"
+  }
+}

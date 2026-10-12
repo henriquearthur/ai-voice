@@ -1,0 +1,47 @@
+.qd-novo { display: grid; gap: 0.625rem; padding: 1rem; margin-bottom: 1rem; background: var(--raised); border: 1px solid var(--rule); border-radius: var(--radius-panel); box-shadow: var(--shadow-xs); }
+.qd-novo h2, .qd-colmeia h2 { font-size: 1.0625rem; font-weight: 650; color: var(--ink); }
+.qd-novo input, .qd-novo textarea {
+	min-width: 0; min-height: 2.75rem; padding: 0.625rem 0.75rem; border: 1px solid var(--input); border-radius: var(--radius-control);
+	background: var(--raised); color: var(--ink); font: inherit; font-size: 1rem; /* 16px evita o zoom do iOS */
+}
+.qd-novo textarea { resize: vertical; }
+.qd-botao {
+	min-height: 2.75rem; padding: 0.5rem 1rem; border-radius: var(--radius-control); border: 0; background: var(--brand); color: var(--brand-contrast);
+	font-size: 1rem; font-weight: 600; cursor: pointer; touch-action: manipulation;
+	transition: transform var(--dur-press) var(--ease-out);
+}
+.qd-botao:active:not(:disabled) { transform: scale(0.97); }
+.qd-botao:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.qd-colunas { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 48rem) { .qd-colunas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 80rem) { .qd-colunas { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.qd-coluna { display: grid; gap: 0.5rem; align-content: start; min-width: 0; }
+.qd-coluna > h2 { display: flex; justify-content: space-between; font-size: 0.8125rem; font-weight: 650; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+.qd-lista { display: grid; gap: 0.5rem; list-style: none; padding: 0; margin: 0; }
+.qd-card { min-width: 0; background: var(--raised); border: 1px solid var(--rule); border-radius: var(--radius-panel); box-shadow: var(--shadow-xs); }
+.qd-card[data-estado='falhou'] { border-color: var(--alert); }
+.qd-card[data-estado='bloqueado'] { border-color: var(--caution); background: var(--caution-soft); }
+.qd-card summary { display: grid; gap: 0.25rem; min-height: 2.75rem; padding: 0.75rem; cursor: pointer; list-style: none; touch-action: manipulation; }
+.qd-card summary::-webkit-details-marker { display: none; }
+.qd-id { font-family: 'JetBrains Mono Variable', ui-monospace, monospace; font-size: 0.75rem; color: var(--ink-faint); }
+.qd-titulo { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.qd-meta { display: flex; flex-wrap: wrap; gap: 0.375rem; font-size: 0.75rem; }
+.qd-meta span { padding: 0.125rem 0.5rem; border-radius: var(--radius-pill); background: var(--sunken); color: var(--ink-soft); }
+.qd-meta .qd-lease { background: var(--brand-soft); color: var(--brand-strong); }
+.qd-meta .qd-lease[data-vencido='true'] { background: var(--alert-soft); color: var(--alert); }
+.qd-corpo { display: grid; gap: 0.625rem; padding: 0 0.75rem 0.75rem; min-width: 0; }
+.qd-corpo h3 { font-size: 0.75rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; }
+.qd-texto { margin: 0; padding: 0.625rem; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--sunken); border-radius: var(--radius-control); font-size: 0.8125rem; line-height: 1.45; color: var(--ink-soft); font-family: inherit; }
+.qd-eventos { display: grid; gap: 0.25rem; list-style: none; padding: 0; margin: 0; font-size: 0.75rem; color: var(--ink-soft); }
+.qd-eventos li { overflow-wrap: anywhere; }
+
+.qd-colmeia { display: grid; gap: 0.5rem; margin-top: 1.25rem; padding: 1rem; background: var(--raised); border: 1px solid var(--rule); border-radius: var(--radius-panel); }
+.qd-msgs { display: grid; gap: 0.5rem; list-style: none; padding: 0; margin: 0; max-height: 18rem; overflow-y: auto; }
+.qd-msgs li { font-size: 0.875rem; color: var(--ink-soft); overflow-wrap: anywhere; }
+.qd-msgs strong { color: var(--ink); }
+.qd-msgs time { color: var(--ink-faint); font-size: 0.75rem; }
+
+.qd-aviso { padding: 0.625rem 0.75rem; border-radius: var(--radius-control); background: var(--alert-soft); color: var(--alert); font-size: 0.875rem; }
+.qd-ok { padding: 0.625rem 0.75rem; border-radius: var(--radius-control); background: var(--positive-soft); color: var(--positive); font-size: 0.875rem; }
+.qd-vazio { color: var(--ink-faint); font-size: 0.875rem; }

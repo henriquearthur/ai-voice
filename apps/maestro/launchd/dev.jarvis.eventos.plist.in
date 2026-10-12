@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Modelo do LaunchAgent da fila de eventos do maestro (jarvis-eventos, só em 127.0.0.1, porta padrão 7353).
+     O apps/maestro/install.sh troca os marcadores entre arrobas e grava em ~/Library/LaunchAgents. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>dev.jarvis.eventos</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>@BUN@</string>
+    <string>@REPO@/apps/maestro/src/eventos-main.ts</string>
+  </array>
+  <key>WorkingDirectory</key><string>@REPO@/apps/maestro</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>JARVIS_MAESTRO_NOME</key><string>@NOME@</string>
+    <key>JARVIS_MAESTRO_DIR</key><string>@DIR@</string>
+    <key>JARVIS_EVENTOS_PORT</key><string>@PORT@</string>
+    <key>JARVIS_HERDR</key><string>@HERDR@</string>
+    <key>JARVIS_FALA</key><string>@FALA@</string>
+    <key>PATH</key><string>@HOME@/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>StandardOutPath</key><string>@DIR@/logs/eventos.out.log</string>
+  <key>StandardErrorPath</key><string>@DIR@/logs/eventos.err.log</string>
+</dict>
+</plist>

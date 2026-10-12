@@ -1,0 +1,69 @@
+{
+  "limites": {
+    "pidMinimo": 100,
+    "cpuPct": 15,
+    "passadasCpu": 5,
+    "rssBytes": 1610612736,
+    "esperaSigkillS": 5,
+    "dedupeMin": 30,
+    "crescimentoMemoria": 0.25
+  },
+  "nuncaMatar": ["claude", "codex", "herdr"],
+  "allowlist": [
+    { "nome": "escuta-instalada", "comando": "/\\.local/share/jarvis/bin/Escuta\\.app/" },
+    { "nome": "kokoro-tts", "comando": "/\\.local/share/jarvis/tts/|jarvis/services/tts/server\\.py|/tts/\\.venv/bin/python" },
+    { "nome": "container-orbstack", "rssBytes": 3758096384, "comando": "OrbStack|orbstack|/(container|docker|containerd|com\\.apple\\.container)[^/]*( |$)|container-runtime|vmnet" },
+    { "nome": "jarvis-app-webkit", "comando": "Jarvis\\.app|WebKit|com\\.apple\\.WebKit" },
+    { "nome": "herdr", "argv0": "(^|/)herdr$" },
+    { "nome": "claude", "argv0": "(^|/)claude$" },
+    { "nome": "codex", "argv0": "(^|/)codex$" },
+    { "nome": "apps-do-usuario", "argv0": "^(/Applications/|/System/Applications/|/System/Library/CoreServices/)" }
+  ],
+  "lixo": [
+    {
+      "padrao": "escuta-fora-instalada",
+      "argv0": "^(\\./Escuta|\\S*/(scratchpad|\\.build|worktrees?)/\\S*Escuta)$",
+      "excluir": "/\\.local/share/jarvis/bin/Escuta\\.app/",
+      "exigeVariavel": "ESCUTA_LOCK",
+      "idadeMinS": 600,
+      "idadeComPaiVivoS": 3600
+    },
+    {
+      "padrao": "swift-build",
+      "comando": "^(\\S*/)?(swift|swift-build)\\s+(build|run)\\b|^(\\S*/)?swift-build\\b",
+      "idadeMinS": 600,
+      "idadeComPaiVivoS": 1800
+    },
+    {
+      "padrao": "cargo-build",
+      "comando": "^(\\S*/)?cargo\\s+(build|test|run)\\b",
+      "idadeMinS": 600,
+      "idadeComPaiVivoS": 1800
+    },
+    {
+      "padrao": "bun-test",
+      "comando": "^(\\S*/)?bun\\s+test\\b",
+      "idadeMinS": 600,
+      "idadeComPaiVivoS": 1800
+    },
+    {
+      "padrao": "vitest",
+      "comando": "^(\\S*/)?(node|bun)\\s+\\S*vitest(\\S*)?(\\s|$)|^(\\S*/)?vitest(\\s|$)",
+      "idadeMinS": 600,
+      "idadeComPaiVivoS": 1800
+    },
+    {
+      "padrao": "chrome-devtools-ponte-orfa",
+      "comando": "chrome-devtools-axi-bridge|chrome-devtools-mcp",
+      "idadeMinS": 3600,
+      "incluirFilhos": true
+    },
+    {
+      "padrao": "python-bench-scratchpad",
+      "argv0": "(^|/)[Pp]ython[\\d.]*$",
+      "comando": "scratchpad\\S*(bench|Bench)|(bench|Bench)\\S*scratchpad|/scratchpad/.*bench",
+      "idadeMinS": 600,
+      "idadeComPaiVivoS": 1800
+    }
+  ]
+}

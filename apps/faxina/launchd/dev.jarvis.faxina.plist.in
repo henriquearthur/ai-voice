@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Modelo do LaunchAgent periódico da faxina (apps/faxina): uma passada por minuto. O
+     apps/faxina/scripts/instalar.sh troca os marcadores entre arrobas e grava
+     ~/Library/LaunchAgents/dev.jarvis.faxina.plist. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>dev.jarvis.faxina</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>@BUN@</string>
+    <string>@REPO@/apps/faxina/src/main.ts</string>
+  </array>
+  <key>WorkingDirectory</key><string>@REPO@/apps/faxina</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>JARVIS_OTLP_URL</key><string>http://127.0.0.1:4318</string>
+    <key>JARVIS_DATA</key><string>@DATA@</string>
+    <key>JARVIS_FAXINA_CONFIG</key><string>@REPO@/apps/faxina/faxina.config.json</string>
+    <key>JARVIS_FAXINA_SECO</key><string>@SECO@</string>
+    <key>PATH</key><string>/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>StartInterval</key><integer>60</integer>
+  <key>RunAtLoad</key><true/>
+  <key>Nice</key><integer>10</integer>
+  <key>ProcessType</key><string>Background</string>
+  <key>LowPriorityIO</key><true/>
+  <key>StandardOutPath</key><string>@DATA@/faxina/logs/faxina.out.log</string>
+  <key>StandardErrorPath</key><string>@DATA@/faxina/logs/faxina.err.log</string>
+</dict>
+</plist>

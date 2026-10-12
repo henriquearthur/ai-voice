@@ -1,0 +1,587 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn-svelte/tailwind.css";
+@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Jarvis: a home console, not a SaaS template.
+ *
+ * Warm graphite neutrals (hue ~80, almost no chroma) carry everything; one cool "sinal" accent
+ * (--brand, a clear azure) marks what is current, focused or actionable, and nothing else.
+ * Status colours (positive, caution, alert) are reserved for state. Depth is quiet: hairlines
+ * first, soft offset shadows only for things that float or are raised.
+ *
+ * Naming:
+ *   surfaces  --canvas (page) · --raised (panels) · --sunken (wells, tracks) · --chrome (nav)
+ *   text      --ink · --ink-soft · --ink-faint
+ *   lines     --rule (hairline) · --rule-strong (dividers you must see) · --input (control edges, 3:1)
+ *   accent    --brand · --brand-soft · --brand-contrast
+ *   status    --positive · --caution · --alert (+ -soft tints)
+ * Legacy names (paper, paper-sunk, carbon, stamp, signal) stay as aliases of the new ones.
+ */
+:root {
+	/* Surfaces */
+	--canvas: oklch(0.978 0.0025 85);
+	--raised: oklch(0.996 0.0012 85);
+	--sunken: oklch(0.953 0.004 85);
+	--chrome: oklch(0.963 0.0035 85);
+	--overlay: oklch(0.996 0.0012 85);
+
+	/* Text */
+	--ink: oklch(0.215 0.008 70);
+	--ink-soft: oklch(0.455 0.009 70);
+	--ink-faint: oklch(0.545 0.008 70);
+
+	/* Lines */
+	--rule: oklch(0.912 0.004 85);
+	--rule-strong: oklch(0.845 0.006 85);
+	--input: oklch(0.66 0.008 80);
+
+	/* Accent */
+	--brand: oklch(0.525 0.115 232);
+	--brand-strong: oklch(0.46 0.12 236);
+	--brand-contrast: oklch(0.99 0.004 230);
+
+	/* Status */
+	--positive: oklch(0.52 0.125 152);
+	--caution: oklch(0.54 0.115 68);
+	--alert: oklch(0.535 0.19 27);
+
+	/* Tints, derived so both themes stay in step */
+	--brand-soft: color-mix(in oklch, var(--brand) 11%, var(--raised));
+	--positive-soft: color-mix(in oklch, var(--positive) 10%, var(--raised));
+	--caution-soft: color-mix(in oklch, var(--caution) 11%, var(--raised));
+	--alert-soft: color-mix(in oklch, var(--alert) 9%, var(--raised));
+	--hover: color-mix(in oklch, var(--ink) 5%, transparent);
+	--pressed: color-mix(in oklch, var(--ink) 8%, transparent);
+
+	/* Depth: offset + soft blur, tinted by the ink so shadows sit in the same world */
+	--shadow-tint: oklch(0.25 0.02 70);
+	--shadow-xs: 0 1px 1px color-mix(in oklch, var(--shadow-tint) 7%, transparent);
+	--shadow-sm:
+		0 1px 2px color-mix(in oklch, var(--shadow-tint) 7%, transparent),
+		0 2px 6px -2px color-mix(in oklch, var(--shadow-tint) 7%, transparent);
+	--shadow-md:
+		0 1px 2px color-mix(in oklch, var(--shadow-tint) 6%, transparent),
+		0 8px 20px -8px color-mix(in oklch, var(--shadow-tint) 16%, transparent);
+	--shadow-lg:
+		0 2px 4px color-mix(in oklch, var(--shadow-tint) 6%, transparent),
+		0 18px 40px -12px color-mix(in oklch, var(--shadow-tint) 24%, transparent);
+	/* A 1px light edge on top of raised things; invisible in light, a lit bevel in dark. */
+	--edge-highlight: inset 0 0 0 0 transparent;
+
+	/* Shape */
+	--radius: 0.5rem;
+	--radius-control: 0.4375rem;
+	--radius-panel: 0.75rem;
+	--radius-pill: 999px;
+
+	/* Layout */
+	--gutter: 1rem;
+	--content-max: 76rem;
+	--sidebar-width: 15rem;
+	--tabbar-height: 3.75rem;
+
+	/* Motion */
+	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+	--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+	--ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+	--dur-press: 120ms;
+	--dur-fast: 160ms;
+	--dur-base: 220ms;
+	--dur-slow: 320ms;
+
+	/* Legacy aliases: screens written against the old form-stock names keep working */
+	--paper: var(--raised);
+	--paper-sunk: var(--sunken);
+	--carbon: var(--brand);
+	--stamp: var(--brand);
+	--signal: var(--positive);
+
+	/* shadcn contract */
+	--background: var(--canvas);
+	--foreground: var(--ink);
+	--card: var(--raised);
+	--card-foreground: var(--ink);
+	--popover: var(--overlay);
+	--popover-foreground: var(--ink);
+	--primary: var(--ink);
+	--primary-foreground: var(--raised);
+	--secondary: var(--sunken);
+	--secondary-foreground: var(--ink);
+	--muted: var(--sunken);
+	--muted-foreground: var(--ink-soft);
+	/* shadcn's "accent" is the hover wash, not the brand */
+	--accent: color-mix(in oklch, var(--ink) 5.5%, var(--raised));
+	--accent-foreground: var(--ink);
+	--destructive: var(--alert);
+	--border: var(--rule);
+	--ring: var(--brand);
+
+	color-scheme: light;
+}
+
+@media (min-width: 40rem) {
+	:root {
+		--gutter: 1.5rem;
+	}
+}
+@media (min-width: 64rem) {
+	:root {
+		--gutter: 2.5rem;
+	}
+}
+
+.dark {
+	--canvas: oklch(0.172 0.004 70);
+	--raised: oklch(0.207 0.005 70);
+	--sunken: oklch(0.148 0.004 70);
+	--chrome: oklch(0.153 0.004 70);
+	--overlay: oklch(0.235 0.006 70);
+
+	--ink: oklch(0.948 0.004 85);
+	--ink-soft: oklch(0.735 0.007 80);
+	--ink-faint: oklch(0.625 0.007 80);
+
+	--rule: oklch(0.268 0.006 70);
+	--rule-strong: oklch(0.345 0.007 70);
+	--input: oklch(0.47 0.008 70);
+
+	--brand: oklch(0.795 0.115 222);
+	--brand-strong: oklch(0.86 0.09 218);
+	--brand-contrast: oklch(0.2 0.04 232);
+
+	--positive: oklch(0.79 0.14 155);
+	--caution: oklch(0.83 0.125 82);
+	--alert: oklch(0.72 0.165 25);
+
+	--brand-soft: color-mix(in oklch, var(--brand) 13%, var(--raised));
+	--positive-soft: color-mix(in oklch, var(--positive) 11%, var(--raised));
+	--caution-soft: color-mix(in oklch, var(--caution) 10%, var(--raised));
+	--alert-soft: color-mix(in oklch, var(--alert) 12%, var(--raised));
+	--hover: color-mix(in oklch, var(--ink) 6%, transparent);
+	--pressed: color-mix(in oklch, var(--ink) 10%, transparent);
+
+	--shadow-tint: oklch(0.05 0 0);
+	--shadow-xs: 0 1px 1px color-mix(in oklch, var(--shadow-tint) 30%, transparent);
+	--shadow-sm:
+		0 1px 2px color-mix(in oklch, var(--shadow-tint) 35%, transparent),
+		0 2px 6px -2px color-mix(in oklch, var(--shadow-tint) 30%, transparent);
+	--shadow-md:
+		0 1px 2px color-mix(in oklch, var(--shadow-tint) 35%, transparent),
+		0 10px 24px -8px color-mix(in oklch, var(--shadow-tint) 55%, transparent);
+	--shadow-lg:
+		0 2px 4px color-mix(in oklch, var(--shadow-tint) 40%, transparent),
+		0 22px 48px -12px color-mix(in oklch, var(--shadow-tint) 70%, transparent);
+	--edge-highlight: inset 0 1px 0 color-mix(in oklch, white 5%, transparent);
+
+	--accent: color-mix(in oklch, var(--ink) 7%, var(--raised));
+
+	color-scheme: dark;
+}
+
+@theme inline {
+	--font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+	/* Fixed product type scale, ratio ~1.15. Use text-title / text-heading / text-body / text-meta / text-micro. */
+	--text-title: 1.75rem;
+	--text-title--line-height: 1.1;
+	--text-title--letter-spacing: -0.02em;
+	--text-heading: 1.0625rem;
+	--text-heading--line-height: 1.35;
+	--text-body: 0.9375rem;
+	--text-body--line-height: 1.55;
+	--text-meta: 0.8125rem;
+	--text-meta--line-height: 1.45;
+	--text-micro: 0.6875rem;
+	--text-micro--line-height: 1.35;
+
+	--color-canvas: var(--canvas);
+	--color-raised: var(--raised);
+	--color-sunken: var(--sunken);
+	--color-chrome: var(--chrome);
+	--color-overlay: var(--overlay);
+	--color-ink: var(--ink);
+	--color-ink-soft: var(--ink-soft);
+	--color-ink-faint: var(--ink-faint);
+	--color-rule: var(--rule);
+	--color-rule-strong: var(--rule-strong);
+	--color-brand: var(--brand);
+	--color-brand-strong: var(--brand-strong);
+	--color-brand-soft: var(--brand-soft);
+	--color-brand-contrast: var(--brand-contrast);
+	--color-positive: var(--positive);
+	--color-positive-soft: var(--positive-soft);
+	--color-caution: var(--caution);
+	--color-caution-soft: var(--caution-soft);
+	--color-alert: var(--alert);
+	--color-alert-soft: var(--alert-soft);
+	--color-hover: var(--hover);
+	--color-pressed: var(--pressed);
+
+	/* Legacy colour utilities (bg-paper, text-carbon, border-stamp, text-signal…) */
+	--color-paper: var(--paper);
+	--color-paper-sunk: var(--paper-sunk);
+	--color-carbon: var(--carbon);
+	--color-stamp: var(--stamp);
+	--color-signal: var(--signal);
+
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	--color-foreground: var(--foreground);
+	--color-background: var(--background);
+
+	--radius-sm: calc(var(--radius) * 0.6);
+	--radius-md: calc(var(--radius) * 0.8);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) * 1.5);
+	--radius-control: var(--radius-control);
+	--radius-panel: var(--radius-panel);
+
+	--shadow-xs: var(--shadow-xs);
+	--shadow-sm: var(--shadow-sm);
+	--shadow-md: var(--shadow-md);
+	--shadow-lg: var(--shadow-lg);
+
+	--ease-out: var(--ease-out);
+	--ease-in-out: var(--ease-in-out);
+	--ease-drawer: var(--ease-drawer);
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	html {
+		@apply font-sans;
+		font-optical-sizing: auto;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		text-rendering: optimizeLegibility;
+		-webkit-tap-highlight-color: transparent;
+		/* iPhone Safari would inflate text in landscape; the type scale is already sized for phones. */
+		-webkit-text-size-adjust: 100%;
+		text-size-adjust: 100%;
+		scrollbar-color: var(--rule-strong) transparent;
+		scrollbar-gutter: stable;
+	}
+	body {
+		@apply bg-background text-foreground;
+		min-height: 100dvh;
+		font-size: var(--text-body);
+		line-height: 1.55;
+		caret-color: var(--brand);
+		/* Nothing may scroll the page sideways on a phone; wide content scrolls inside its own box. */
+		overflow-x: clip;
+	}
+	h1,
+	h2,
+	h3 {
+		text-wrap: balance;
+	}
+	p {
+		text-wrap: pretty;
+	}
+	::selection {
+		background: color-mix(in oklch, var(--brand) 26%, transparent);
+		color: var(--ink);
+	}
+	:focus-visible {
+		outline: 2px solid var(--brand);
+		outline-offset: 2px;
+	}
+	a {
+		text-underline-offset: 0.2em;
+		text-decoration-thickness: 1px;
+	}
+	::-webkit-scrollbar {
+		width: 10px;
+		height: 10px;
+	}
+	::-webkit-scrollbar-thumb {
+		background: var(--rule-strong);
+		border: 3px solid transparent;
+		border-radius: 999px;
+		background-clip: padding-box;
+	}
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		/* Spinners stay (they carry meaning) but slow down; decorative motion stops. */
+		.animate-spin {
+			animation-duration: 2.4s;
+		}
+		.animate-pulse {
+			animation: none;
+		}
+		*,
+		::before,
+		::after {
+			scroll-behavior: auto !important;
+		}
+	}
+	code,
+	kbd,
+	samp {
+		@apply font-mono;
+		font-variant-ligatures: none;
+	}
+}
+
+/* Numbers that line up: counts, times, serials. */
+@utility tabular {
+	font-variant-numeric: tabular-nums slashed-zero;
+}
+
+/* The label above a field or a group: small, medium weight, soft ink. Never an eyebrow above a heading. */
+@utility field-label {
+	font-size: var(--text-meta);
+	line-height: 1.3;
+	font-weight: 550;
+	letter-spacing: 0.005em;
+	color: var(--ink-soft);
+}
+
+/* Archivo opened up a little: module titles and the few numbers that deserve size. */
+@utility display {
+	font-stretch: 108%;
+	font-weight: 640;
+	letter-spacing: -0.022em;
+}
+
+/* Secondary metadata line: timestamps, counts, hints. */
+@utility meta {
+	font-size: var(--text-meta);
+	line-height: 1.45;
+	color: var(--ink-soft);
+}
+
+/* Inline link inside running text. */
+@utility link {
+	color: var(--brand);
+	text-decoration-line: underline;
+	text-decoration-color: color-mix(in oklch, var(--brand) 40%, transparent);
+	text-underline-offset: 0.2em;
+	transition: text-decoration-color var(--dur-fast) ease;
+	&:hover {
+		text-decoration-color: var(--brand);
+	}
+}
+
+/* Keyboard key. */
+@utility kbd {
+	display: inline-grid;
+	place-items: center;
+	min-width: 1.25rem;
+	height: 1.25rem;
+	padding-inline: 0.3125rem;
+	border: 1px solid var(--rule-strong);
+	border-bottom-width: 2px;
+	border-radius: 0.3125rem;
+	background-color: var(--raised);
+	font-family: var(--font-mono);
+	font-size: 0.6875rem;
+	line-height: 1;
+	color: var(--ink-soft);
+}
+
+/* Writing lines that stay locked to the text's line-height. */
+@utility ruled {
+	--line: 1.75rem;
+	line-height: var(--line);
+	background-image: linear-gradient(
+		to bottom,
+		transparent calc(var(--line) - 1px),
+		color-mix(in oklch, var(--rule) 70%, transparent) calc(var(--line) - 1px)
+	);
+	background-size: 100% var(--line);
+	background-attachment: local;
+}
+
+/* A quiet tear-off edge: a dashed hairline where a receipt meets what produced it. */
+@utility perforated {
+	background-image: linear-gradient(to right, var(--rule-strong) 50%, transparent 50%);
+	background-size: 8px 1px;
+	background-repeat: repeat-x;
+	background-position: 0 0;
+}
+
+/*
+ * A raised panel: the one container every module uses for a form or a list.
+ * `sheet` is the historical name; `panel` is the same thing.
+ */
+@utility sheet {
+	border: 1px solid var(--rule);
+	border-radius: var(--radius-panel);
+	background-color: var(--raised);
+	box-shadow: var(--shadow-xs), var(--edge-highlight);
+	transition-property: border-color, box-shadow;
+	transition-duration: var(--dur-fast);
+	transition-timing-function: ease;
+	/* Borderless fields written straight on the panel (data-bare) show focus on the panel itself. */
+	&:has([data-bare]:focus-visible) {
+		border-color: color-mix(in oklch, var(--brand) 70%, var(--rule));
+		box-shadow:
+			0 0 0 3px color-mix(in oklch, var(--brand) 16%, transparent),
+			var(--shadow-xs);
+	}
+}
+@utility panel {
+	border: 1px solid var(--rule);
+	border-radius: var(--radius-panel);
+	background-color: var(--raised);
+	box-shadow: var(--shadow-xs), var(--edge-highlight);
+	transition-property: border-color, box-shadow;
+	transition-duration: var(--dur-fast);
+	&:has([data-bare]:focus-visible) {
+		border-color: color-mix(in oklch, var(--brand) 70%, var(--rule));
+		box-shadow:
+			0 0 0 3px color-mix(in oklch, var(--brand) 16%, transparent),
+			var(--shadow-xs);
+	}
+}
+
+/* A sunken well inside a panel: code, previews, secondary content. */
+@utility well {
+	border: 1px solid var(--rule);
+	border-radius: var(--radius-control);
+	background-color: var(--sunken);
+}
+
+/* A row inside a list that reacts to the pointer without moving. */
+@utility row-interactive {
+	transition: background-color var(--dur-fast) ease;
+	@media (hover: hover) and (pointer: fine) {
+		&:hover {
+			background-color: var(--hover);
+		}
+	}
+}
+
+/* One text field look for every module: raised field, input edge, brand edge and halo on focus. */
+@utility field-input {
+	height: 2.5rem;
+	width: 100%;
+	border: 1px solid var(--input);
+	border-radius: var(--radius-control);
+	background-color: var(--raised);
+	padding-inline: 0.75rem;
+	font-size: var(--text-body);
+	color: var(--ink);
+	outline: none;
+	box-shadow: var(--shadow-xs);
+	transition-property: border-color, box-shadow, background-color;
+	transition-duration: var(--dur-fast);
+	transition-timing-function: ease;
+	&::placeholder {
+		color: var(--ink-faint);
+	}
+	&:hover:not(:disabled, [readonly], :focus-visible) {
+		border-color: var(--ink-faint);
+	}
+	&:focus-visible {
+		outline: none;
+		border-color: var(--brand);
+		box-shadow: 0 0 0 3px color-mix(in oklch, var(--brand) 20%, transparent);
+	}
+	&[aria-invalid="true"] {
+		border-color: var(--alert);
+		&:focus-visible {
+			box-shadow: 0 0 0 3px color-mix(in oklch, var(--alert) 18%, transparent);
+		}
+	}
+	&:disabled {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+	&[readonly] {
+		background-color: var(--sunken);
+		box-shadow: none;
+	}
+	/* Touch: a 44px target, and 16px text so iPhone Safari does not zoom in on focus. */
+	@media (pointer: coarse) {
+		min-height: 2.75rem;
+		font-size: 1rem;
+	}
+}
+
+/* Segmented control: a sunk track with one raised option. Works for radios (label > input) and links (aria-current). */
+@utility segmented {
+	display: grid;
+	grid-auto-columns: minmax(0, 1fr);
+	grid-auto-flow: column;
+	gap: 0.125rem;
+	border: 1px solid var(--rule);
+	border-radius: calc(var(--radius-control) + 0.1875rem);
+	background-color: var(--sunken);
+	padding: 0.1875rem;
+}
+
+@utility segment {
+	cursor: pointer;
+	border-radius: var(--radius-control);
+	padding: 0.375rem 0.75rem;
+	text-align: center;
+	font-size: 0.875rem;
+	font-weight: 550;
+	white-space: nowrap;
+	color: var(--ink-soft);
+	transition-property: background-color, color, box-shadow, scale;
+	transition-duration: var(--dur-fast);
+	transition-timing-function: var(--ease-out);
+	&:hover {
+		color: var(--ink);
+	}
+	&:active {
+		scale: 0.97;
+	}
+	&:has(input:checked),
+	&[aria-current="page"] {
+		background-color: var(--raised);
+		color: var(--ink);
+		box-shadow:
+			0 0 0 1px var(--rule-strong),
+			var(--shadow-sm);
+	}
+	&:has(input:focus-visible) {
+		outline: 2px solid var(--brand);
+		outline-offset: 1px;
+	}
+	&:has(input:disabled) {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+	@media (pointer: coarse) {
+		padding-block: 0.625rem;
+	}
+}
+
+/* Status dot: online, offline, pending. Colour by text-* on the element. */
+@utility status-dot {
+	display: inline-block;
+	width: 0.5rem;
+	height: 0.5rem;
+	flex-shrink: 0;
+	border-radius: 999px;
+	background-color: currentColor;
+	box-shadow: 0 0 0 3px color-mix(in oklch, currentColor 18%, transparent);
+}

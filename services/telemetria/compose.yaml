@@ -1,0 +1,52 @@
+# Backend de telemetria do Jarvis: Grafana LGTM (OTel Collector + Prometheus + Tempo + Loki + Grafana)
+# num contêiner só, ouvindo apenas em 127.0.0.1.
+#
+#   Grafana (painel Jarvis)  http://127.0.0.1:7351/d/jarvis
+#   OTLP HTTP                http://127.0.0.1:4318   (gRPC em 4317)
+#   Prometheus               http://127.0.0.1:9090   (a aba Telemetria do dashboard lê daqui)
+#
+# Sobe com: docker compose -f services/telemetria/compose.yaml up -d
+# (a sonda do LaunchAgent dev.jarvis.telemetria faz isso sozinha quando o coletor não responde).
+name: jarvis-telemetria
+
+services:
+  lgtm:
+    image: grafana/otel-lgtm:0.36.0
+    container_name: jarvis-telemetria
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7351:3000"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:9090:9090"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /otel-lgtm/jarvis/jarvis.json
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      # Retenção curta (3 dias em Prometheus, Tempo e Loki): é um Mac pessoal, não um data lake.
+      PROMETHEUS_EXTRA_ARGS: "--storage.tsdb.retention.time=3d"
+      # Cada plugin de datasource com backend sobe um processo próprio (~5-15 MiB cada); o painel
+      # usa só Prometheus, Loki e Tempo (Pyroscope fica: tem datasource provisionado).
+      GF_PLUGINS_DISABLE_PLUGINS: "elasticsearch,influxdb,mssql,mysql,opentsdb,zipkin,jaeger,grafana-postgresql-datasource,stackdriver,grafana-llm-app"
+    volumes:
+      - jarvis-telemetria-data:/data
+      - ./grafana/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/jarvis.yaml:ro
+      - ./grafana/jarvis.json:/otel-lgtm/jarvis/jarvis.json:ro
+      # Ajustes para um Mac pessoal: sem Pyroscope, sem auto-scrape de 1 s do coletor, sem o
+      # metrics-generator do Tempo, batch de 15 s, retenção de 3 dias e nomes de métrica sem sufixo.
+      - ./lgtm/run-all.sh:/otel-lgtm/run-all.sh:ro
+      - ./lgtm/otelcol-config.yaml:/otel-lgtm/otelcol-config.yaml:ro
+      - ./lgtm/prometheus.yaml:/otel-lgtm/prometheus.yaml:ro
+      - ./lgtm/tempo-config.yaml:/otel-lgtm/tempo-config.yaml:ro
+      - ./lgtm/loki-config.yaml:/otel-lgtm/loki-config.yaml:ro
+    cpus: 1.0
+    # Uso real (anon) fica em ~300-600 MiB; acima disso era cache de página do volume, que o
+    # OrbStack segura na VM e aparece no RSS do OrbStack Helper no macOS.
+    mem_limit: 1g
+    memswap_limit: 1.5g
+
+volumes:
+  jarvis-telemetria-data:

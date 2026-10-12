@@ -1,0 +1,18 @@
+#!/bin/zsh
+# jarvis-fala: fala o texto no Mac (sai nos AirPods), em pt-BR, uma fala por vez.
+# Voz local Kokoro (fallback: say -v Luciana), mesmo lock do speak do servidor MCP.
+# Instalado pelo scripts/setup.sh do repositório Jarvis.
+# Uso: jarvis-fala "texto"   ou   echo "texto" | jarvis-fala
+text="${*:-$(cat)}"
+[[ -z "${text// }" ]] && exit 0
+# Voz única: sessão de bot (JARVIS_BOT definido) que não seja o chefe não fala. A fala vira evento
+# no quadro (se o CLI existir) e linha no fala.log. Sem JARVIS_BOT, comportamento de sempre.
+if [[ -n "${JARVIS_BOT:-}" && "$JARVIS_BOT" != chefe ]]; then
+  log="${JARVIS_FALA_LOG:-$HOME/.local/share/jarvis/tts/logs/fala.log}"
+  mkdir -p "${log:h}" 2>/dev/null
+  print -r -- "$(date -u +%Y-%m-%dT%H:%M:%SZ) pid=$$ motor=descartada chars=${#text} audio_s=0 rc=0 motivo=bot:$JARVIS_BOT" >>"$log" 2>/dev/null
+  cli="${JARVIS_QUADRO_CLI:-$HOME/Documents/code/orgs/fernandoeeu/ai-voice/packages/quadro/bin/quadro.ts}"
+  [[ -f "$cli" ]] && command -v bun >/dev/null && bun "$cli" msg "$JARVIS_BOT" chefe "$text" >/dev/null 2>&1
+  exit 0
+fi
+exec "${JARVIS_TTS_HOME:-$HOME/.local/share/jarvis/tts}/fala-kokoro.sh" "$text"
